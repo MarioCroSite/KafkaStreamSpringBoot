@@ -1,0 +1,17 @@
+com:
+  mario:
+    kafka:
+      order-topic: "orders"
+      order-calculated-topic: "orders-full"
+
+      bootstrap-servers:
+        - localhost:9091
+        - localhost:9092
+        - localhost:9093
+      security-protocol: "PLAINTEXT"
+      application-id: "order"
+      consumer-group-id: "transformer"
+      trusted-packages: "*"
+
+server:
+  port: 8083

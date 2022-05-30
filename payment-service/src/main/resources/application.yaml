@@ -1,0 +1,16 @@
+com:
+  mario:
+    kafka:
+      order-full-topic: "orders-full"
+
+      bootstrap-servers:
+        - localhost:9091
+        - localhost:9092
+        - localhost:9093
+      security-protocol: "PLAINTEXT"
+      application-id: "payment"
+      consumer-group-id: "transformer"
+      trusted-packages: "*"
+
+server:
+  port: 8084
