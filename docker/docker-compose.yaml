@@ -68,21 +68,21 @@ services:
       - ZK_HOSTS=zoo:2181
     depends_on:
       - zoo
-#  akhq:
-#    image: tchiotludo/akhq
-#    environment:
-#      AKHQ_CONFIGURATION: |
-#        akhq:
-#          connections:
-#            docker-kafka-server:
-#              properties:
-#                bootstrap.servers: "kafka1:19091,kafka2:19092,kafka3:19093"
-#    ports:
-#      - 8081:8080
-#    depends_on:
-#      - kafka1
-#      - kafka2
-#      - kafka3
+  akhq:
+    image: tchiotludo/akhq
+    environment:
+      AKHQ_CONFIGURATION: |
+        akhq:
+          connections:
+            docker-kafka-server:
+              properties:
+                bootstrap.servers: "kafka1:19091,kafka2:19092,kafka3:19093"
+    ports:
+      - 8090:8080
+    depends_on:
+      - kafka1
+      - kafka2
+      - kafka3
 #  kafkadrop:
 #    image: obsidiandynamics/kafdrop:3.28.0
 #    depends_on:

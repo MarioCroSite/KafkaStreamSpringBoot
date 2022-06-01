@@ -21,7 +21,7 @@ public class ReservationAggregator implements Aggregator<String, OrderFullEvent,
             case CONFIRMED:
                 reservation.setAmountReserved(reservation.getAmountReserved().subtract(orderEvent.getPrice()));
             case ROLLBACK:
-                if(!orderEvent.getSource().equals(Source.PAYMENT)) {
+                if(orderEvent.getSource() != null && !orderEvent.getSource().equals(Source.PAYMENT)) {
                     reservation.setAmountAvailable(reservation.getAmountAvailable().add(orderEvent.getPrice()));
                     reservation.setAmountReserved(reservation.getAmountReserved().subtract(orderEvent.getPrice()));
                 }
