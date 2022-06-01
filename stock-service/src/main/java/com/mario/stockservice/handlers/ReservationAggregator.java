@@ -5,8 +5,15 @@ import com.mario.events.Source;
 import com.mario.events.Status;
 import com.mario.stockservice.domain.ReservationEvent;
 import org.apache.kafka.streams.kstream.Aggregator;
+import org.springframework.kafka.core.KafkaTemplate;
 
 public class ReservationAggregator implements Aggregator<String, OrderFullEvent, ReservationEvent> {
+
+    KafkaTemplate<String, Object> kafkaTemplate;
+
+    public ReservationAggregator(KafkaTemplate<String, Object> kafkaTemplate) {
+        this.kafkaTemplate = kafkaTemplate;
+    }
 
     @Override
     public ReservationEvent apply(String s, OrderFullEvent orderEvent, ReservationEvent reservation) {
@@ -26,6 +33,8 @@ public class ReservationAggregator implements Aggregator<String, OrderFullEvent,
                 } else {
                     orderEvent.setStatus(Status.REJECT);
                 }
+
+                kafkaTemplate.send("stock-orders", orderEvent.getId(), orderEvent);
         }
 
         return reservation;

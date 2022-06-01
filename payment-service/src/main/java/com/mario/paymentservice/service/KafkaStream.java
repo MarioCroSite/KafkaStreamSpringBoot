@@ -15,12 +15,19 @@ import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.Stores;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.serializer.JsonSerde;
 
 import java.math.BigDecimal;
 
 @Configuration
 public class KafkaStream {
+
+    KafkaTemplate<String, Object> kafkaTemplate;
+
+    public KafkaStream(KafkaTemplate<String, Object> kafkaTemplate) {
+        this.kafkaTemplate = kafkaTemplate;
+    }
 
     @Bean
     public KStream<String, OrderFullEvent> kStream(StreamsBuilder streamsBuilder,
@@ -42,7 +49,7 @@ public class KafkaStream {
                 .groupByKey(Grouped.with(stringSerde, orderCalculatedEventSerde))
                 .aggregate(
                         () -> new ReservationEvent(Randomizer.generate(BigDecimal.ONE, BigDecimal.valueOf(1000))),
-                        new ReservationAggregator(),
+                        new ReservationAggregator(kafkaTemplate),
                         Materialized.<String, ReservationEvent>as(customerOrderStoreSupplier)
                                 .withKeySerde(stringSerde)
                                 .withValueSerde(reservationEventSerde))

@@ -8,28 +8,9 @@ import java.util.List;
 @Configuration
 @ConfigurationProperties(prefix = "com.mario.kafka")
 public class KafkaProperties {
-    private String orderTopic;
-    private String orderCalculatedTopic;
     private String applicationId;
     private List<String> bootstrapServers;
     private String securityProtocol;
-
-
-    public String getOrderTopic() {
-        return orderTopic;
-    }
-
-    public void setOrderTopic(String orderTopic) {
-        this.orderTopic = orderTopic;
-    }
-
-    public String getOrderCalculatedTopic() {
-        return orderCalculatedTopic;
-    }
-
-    public void setOrderCalculatedTopic(String orderCalculatedTopic) {
-        this.orderCalculatedTopic = orderCalculatedTopic;
-    }
 
     public String getApplicationId() {
         return applicationId;
@@ -58,9 +39,7 @@ public class KafkaProperties {
     @Override
     public String toString() {
         return "KafkaProperties{" +
-                "orderTopic='" + orderTopic + '\'' +
-                ", orderCalculatedTopic='" + orderCalculatedTopic + '\'' +
-                ", applicationId='" + applicationId + '\'' +
+                "applicationId='" + applicationId + '\'' +
                 ", bootstrapServers=" + bootstrapServers +
                 ", securityProtocol='" + securityProtocol + '\'' +
                 '}';

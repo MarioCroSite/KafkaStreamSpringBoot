@@ -1,9 +1,6 @@
 com:
   mario:
     kafka:
-      order-topic: "orders"
-      order-calculated-topic: "orders-full"
-
       bootstrap-servers:
         - localhost:9091
         - localhost:9092
