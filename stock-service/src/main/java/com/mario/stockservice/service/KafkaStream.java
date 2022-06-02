@@ -46,7 +46,7 @@ public class KafkaStream {
                .selectKey((k, v) -> v.getMarketId())
                .groupByKey(Grouped.with(stringSerde, orderCalculatedEventSerde))
                .aggregate(
-                       () -> new ReservationEvent(Randomizer.generate(1, 1000)),
+                       () -> new ReservationEvent(Randomizer.generate(1, 50_000)),
                        new ReservationAggregator(kafkaTemplate),
                        Materialized.<String, ReservationEvent>as(stockOrderStoreSupplier)
                                .withKeySerde(stringSerde)
