@@ -1,10 +1,12 @@
 package com.mario.generator.config;
 
 import org.apache.kafka.clients.CommonClientConfigs;
+import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.serializer.JsonSerializer;
@@ -27,6 +29,42 @@ public class KafkaConfiguration {
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
         return props;
+    }
+
+    @Bean
+    public NewTopic orders() {
+        return TopicBuilder.name("orders")
+                .partitions(3)
+                .replicas(2)
+                .compact()
+                .build();
+    }
+
+    @Bean
+    public NewTopic ordersFull() {
+        return TopicBuilder.name("orders-full")
+                .partitions(3)
+                .replicas(2)
+                .compact()
+                .build();
+    }
+
+    @Bean
+    public NewTopic paymentTopic() {
+        return TopicBuilder.name("payment-orders")
+                .partitions(3)
+                .replicas(2)
+                .compact()
+                .build();
+    }
+
+    @Bean
+    public NewTopic stockTopic() {
+        return TopicBuilder.name("stock-orders")
+                .partitions(3)
+                .replicas(2)
+                .compact()
+                .build();
     }
 
 }

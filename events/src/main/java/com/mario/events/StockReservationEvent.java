@@ -1,13 +1,13 @@
-package com.mario.stockservice.domain;
+package com.mario.events;
 
-public class ReservationEvent {
+public class StockReservationEvent {
     private int itemsAvailable = 0;
     private int itemsReserved = 0;
 
-    public ReservationEvent() {
+    public StockReservationEvent() {
     }
 
-    public ReservationEvent(int itemsAvailable) {
+    public StockReservationEvent(int itemsAvailable) {
         this.itemsAvailable = itemsAvailable;
     }
 
@@ -29,7 +29,7 @@ public class ReservationEvent {
 
     @Override
     public String toString() {
-        return "ReservationEvent{" +
+        return "StockReservationEvent{" +
                 "itemsAvailable=" + itemsAvailable +
                 ", itemsReserved=" + itemsReserved +
                 '}';

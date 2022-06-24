@@ -8,10 +8,28 @@ import java.util.List;
 @Configuration
 @ConfigurationProperties(prefix = "com.mario.kafka")
 public class KafkaProperties {
+    private String paymentOrders;
+    private String customerOrdersStore;
     private String orderFullTopic;
     private String applicationId;
     private List<String> bootstrapServers;
     private String securityProtocol;
+
+    public String getPaymentOrders() {
+        return paymentOrders;
+    }
+
+    public void setPaymentOrders(String paymentOrders) {
+        this.paymentOrders = paymentOrders;
+    }
+
+    public String getCustomerOrdersStore() {
+        return customerOrdersStore;
+    }
+
+    public void setCustomerOrdersStore(String customerOrdersStore) {
+        this.customerOrdersStore = customerOrdersStore;
+    }
 
     public String getOrderFullTopic() {
         return orderFullTopic;
@@ -48,7 +66,9 @@ public class KafkaProperties {
     @Override
     public String toString() {
         return "KafkaProperties{" +
-                "orderFullTopic='" + orderFullTopic + '\'' +
+                "paymentOrders='" + paymentOrders + '\'' +
+                ", customerOrdersStore='" + customerOrdersStore + '\'' +
+                ", orderFullTopic='" + orderFullTopic + '\'' +
                 ", applicationId='" + applicationId + '\'' +
                 ", bootstrapServers=" + bootstrapServers +
                 ", securityProtocol='" + securityProtocol + '\'' +

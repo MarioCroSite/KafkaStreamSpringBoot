@@ -1,6 +1,8 @@
 com:
   mario:
     kafka:
+      payment-orders: "payment-orders"
+      customer-orders-store: "customer-orders-store"
       order-full-topic: "orders-full"
 
       bootstrap-servers:

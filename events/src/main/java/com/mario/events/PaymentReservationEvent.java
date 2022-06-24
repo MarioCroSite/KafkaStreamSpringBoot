@@ -2,14 +2,14 @@ package com.mario.events;
 
 import java.math.BigDecimal;
 
-public class PaymentReservation {
-    private BigDecimal amountAvailable;
-    private BigDecimal amountReserved;
+public class PaymentReservationEvent {
+    private BigDecimal amountAvailable = BigDecimal.ZERO;
+    private BigDecimal amountReserved = BigDecimal.ZERO;
 
-    public PaymentReservation() {
+    public PaymentReservationEvent() {
     }
 
-    public PaymentReservation(BigDecimal amountAvailable) {
+    public PaymentReservationEvent(BigDecimal amountAvailable) {
         this.amountAvailable = amountAvailable;
     }
 
@@ -32,7 +32,7 @@ public class PaymentReservation {
 
     @Override
     public String toString() {
-        return "PaymentReservation{" +
+        return "PaymentReservationEvent{" +
                 "amountAvailable=" + amountAvailable +
                 ", amountReserved=" + amountReserved +
                 '}';

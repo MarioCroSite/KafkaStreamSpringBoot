@@ -1,6 +1,8 @@
 com:
   mario:
     kafka:
+      stock-orders: "stock-orders"
+      market-orders-store: "market-orders-store"
       order-full-topic: "orders-full"
 
       bootstrap-servers:

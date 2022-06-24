@@ -1,22 +1,25 @@
 package com.mario.paymentservice.handlers;
 
 import com.mario.events.OrderFullEvent;
+import com.mario.events.PaymentReservationEvent;
 import com.mario.events.Source;
 import com.mario.events.Status;
-import com.mario.paymentservice.domain.ReservationEvent;
+import com.mario.paymentservice.config.KafkaProperties;
 import org.apache.kafka.streams.kstream.Aggregator;
 import org.springframework.kafka.core.KafkaTemplate;
 
-public class ReservationAggregator implements Aggregator<String, OrderFullEvent, ReservationEvent> {
+public class ReservationAggregator implements Aggregator<String, OrderFullEvent, PaymentReservationEvent> {
 
     KafkaTemplate<String, Object> kafkaTemplate;
+    KafkaProperties kafkaProperties;
 
-    public ReservationAggregator(KafkaTemplate<String, Object> kafkaTemplate) {
+    public ReservationAggregator(KafkaTemplate<String, Object> kafkaTemplate, KafkaProperties kafkaProperties) {
         this.kafkaTemplate = kafkaTemplate;
+        this.kafkaProperties = kafkaProperties;
     }
 
     @Override
-    public ReservationEvent apply(String s, OrderFullEvent orderEvent, ReservationEvent reservation) {
+    public PaymentReservationEvent apply(String s, OrderFullEvent orderEvent, PaymentReservationEvent reservation) {
         switch (orderEvent.getStatus()) {
             case CONFIRMED:
                 reservation.setAmountReserved(reservation.getAmountReserved().subtract(orderEvent.getPrice()));
@@ -34,7 +37,7 @@ public class ReservationAggregator implements Aggregator<String, OrderFullEvent,
                     orderEvent.setStatus(Status.REJECT);
                 }
 
-                kafkaTemplate.send("payment-orders", orderEvent.getId(), orderEvent);
+                kafkaTemplate.send(kafkaProperties.getPaymentOrders(), orderEvent.getId(), orderEvent);
         }
 
         return reservation;

@@ -3,20 +3,23 @@ package com.mario.stockservice.handlers;
 import com.mario.events.OrderFullEvent;
 import com.mario.events.Source;
 import com.mario.events.Status;
-import com.mario.stockservice.domain.ReservationEvent;
+import com.mario.events.StockReservationEvent;
+import com.mario.stockservice.config.KafkaProperties;
 import org.apache.kafka.streams.kstream.Aggregator;
 import org.springframework.kafka.core.KafkaTemplate;
 
-public class ReservationAggregator implements Aggregator<String, OrderFullEvent, ReservationEvent> {
+public class ReservationAggregator implements Aggregator<String, OrderFullEvent, StockReservationEvent> {
 
     KafkaTemplate<String, Object> kafkaTemplate;
+    KafkaProperties kafkaProperties;
 
-    public ReservationAggregator(KafkaTemplate<String, Object> kafkaTemplate) {
+    public ReservationAggregator(KafkaTemplate<String, Object> kafkaTemplate, KafkaProperties kafkaProperties) {
         this.kafkaTemplate = kafkaTemplate;
+        this.kafkaProperties = kafkaProperties;
     }
 
     @Override
-    public ReservationEvent apply(String s, OrderFullEvent orderEvent, ReservationEvent reservation) {
+    public StockReservationEvent apply(String s, OrderFullEvent orderEvent, StockReservationEvent reservation) {
         switch (orderEvent.getStatus()) {
             case CONFIRMED:
                 reservation.setItemsReserved(reservation.getItemsReserved() - orderEvent.getProductCount());
@@ -34,7 +37,7 @@ public class ReservationAggregator implements Aggregator<String, OrderFullEvent,
                     orderEvent.setStatus(Status.REJECT);
                 }
 
-                kafkaTemplate.send("stock-orders", orderEvent.getId(), orderEvent);
+                kafkaTemplate.send(kafkaProperties.getStockOrders(), orderEvent.getId(), orderEvent);
         }
 
         return reservation;

@@ -1,8 +1,8 @@
 package com.mario.stockservice.service;
 
 import com.mario.events.OrderFullEvent;
+import com.mario.events.StockReservationEvent;
 import com.mario.stockservice.config.KafkaProperties;
-import com.mario.stockservice.domain.ReservationEvent;
 import com.mario.stockservice.handlers.ReservationAggregator;
 import com.mario.stockservice.util.Randomizer;
 import org.apache.kafka.common.serialization.Serdes;
@@ -27,28 +27,27 @@ public class KafkaStream {
         this.kafkaTemplate = kafkaTemplate;
     }
 
-
     @Bean
     public KStream<String, OrderFullEvent> kStream(StreamsBuilder streamsBuilder,
                                                    KafkaProperties kafkaProperties) {
         var stringSerde = Serdes.String();
-        var orderCalculatedEventSerde = new JsonSerde<>(OrderFullEvent.class);
-        var reservationEventSerde = new JsonSerde<>(ReservationEvent.class);
+        var orderFullEventSerde = new JsonSerde<>(OrderFullEvent.class);
+        var reservationEventSerde = new JsonSerde<>(StockReservationEvent.class);
 
         var incomingOrderCalculatedEvent = streamsBuilder
-                .stream(kafkaProperties.getOrderFullTopic(), Consumed.with(stringSerde, orderCalculatedEventSerde))
+                .stream(kafkaProperties.getOrderFullTopic(), Consumed.with(stringSerde, orderFullEventSerde))
                 .peek((key, value) -> System.out.println("[STOCK-SERVICE] Key="+ key +", Value="+ value));
 
-        KeyValueBytesStoreSupplier stockOrderStoreSupplier =
-                Stores.persistentKeyValueStore("stock-orders");
+        KeyValueBytesStoreSupplier marketOrderStoreSupplier =
+                Stores.persistentKeyValueStore(kafkaProperties.getMarketOrdersStore());
 
         incomingOrderCalculatedEvent
                .selectKey((k, v) -> v.getMarketId())
-               .groupByKey(Grouped.with(stringSerde, orderCalculatedEventSerde))
+               .groupByKey(Grouped.with(stringSerde, orderFullEventSerde))
                .aggregate(
-                       () -> new ReservationEvent(Randomizer.generate(1, 50_000)),
-                       new ReservationAggregator(kafkaTemplate),
-                       Materialized.<String, ReservationEvent>as(stockOrderStoreSupplier)
+                       () -> new StockReservationEvent(Randomizer.generate(1, 50_000)),
+                       new ReservationAggregator(kafkaTemplate, kafkaProperties),
+                       Materialized.<String, StockReservationEvent>as(marketOrderStoreSupplier)
                                .withKeySerde(stringSerde)
                                .withValueSerde(reservationEventSerde)
                )
