@@ -20,7 +20,7 @@ public class GeneratorService {
         this.kafkaProperties = kafkaProperties;
     }
 
-    @Scheduled(fixedRate = 1000)
+    @Scheduled(fixedRate = 60000) //every minute
     public void orderEventGenerator() {
         OrderEvent event = OrderEvent.OrderEventBuilder.aOrderEvent()
                 .withId(UUID.randomUUID().toString())

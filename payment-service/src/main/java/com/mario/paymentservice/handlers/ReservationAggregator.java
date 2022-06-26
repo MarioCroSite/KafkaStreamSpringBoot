@@ -19,15 +19,17 @@ public class ReservationAggregator implements Aggregator<String, OrderFullEvent,
     }
 
     @Override
-    public PaymentReservationEvent apply(String s, OrderFullEvent orderEvent, PaymentReservationEvent reservation) {
+    public PaymentReservationEvent apply(String key, OrderFullEvent orderEvent, PaymentReservationEvent reservation) {
         switch (orderEvent.getStatus()) {
             case CONFIRMED:
                 reservation.setAmountReserved(reservation.getAmountReserved().subtract(orderEvent.getPrice()));
+                break;
             case ROLLBACK:
                 if(orderEvent.getSource() != null && !orderEvent.getSource().equals(Source.PAYMENT)) {
                     reservation.setAmountAvailable(reservation.getAmountAvailable().add(orderEvent.getPrice()));
                     reservation.setAmountReserved(reservation.getAmountReserved().subtract(orderEvent.getPrice()));
                 }
+                break;
             case NEW:
                 if(orderEvent.getPrice().compareTo(reservation.getAmountAvailable()) <= 1) {
                     reservation.setAmountAvailable(reservation.getAmountAvailable().subtract(orderEvent.getPrice()));

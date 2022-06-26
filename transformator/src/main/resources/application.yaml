@@ -3,14 +3,17 @@ com:
     kafka:
       order-topic: "orders"
       order-full-topic: "orders-full"
-
+      valuable-customer: "valuable-customer"
+      valuable-customer-threshold: 4000
+      full-mini-cart: "full-mini-cart"
+      half-full-cart: "half-full-cart"
       bootstrap-servers:
         - localhost:9091
         - localhost:9092
         - localhost:9093
       security-protocol: "PLAINTEXT"
       application-id: "transformer"
-      consumer-group-id: "transformer"
+      consumer-group-id: "transformer-group"
       trusted-packages: "*"
 
 server:

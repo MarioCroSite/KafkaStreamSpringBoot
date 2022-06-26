@@ -4,7 +4,6 @@ import com.mario.events.OrderFullEvent;
 import com.mario.events.PaymentReservationEvent;
 import com.mario.paymentservice.config.KafkaProperties;
 import com.mario.paymentservice.handlers.ReservationAggregator;
-import com.mario.paymentservice.util.Randomizer;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.Consumed;
@@ -13,6 +12,8 @@ import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.Stores;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -22,6 +23,7 @@ import java.math.BigDecimal;
 
 @Configuration
 public class KafkaStream {
+    private static final Logger logger = LoggerFactory.getLogger(KafkaStream.class);
 
     KafkaTemplate<String, Object> kafkaTemplate;
 
@@ -39,7 +41,7 @@ public class KafkaStream {
 
         var incomingOrderCalculatedEvent = streamsBuilder
                 .stream(kafkaProperties.getOrderFullTopic(), Consumed.with(stringSerde, orderFullEventSerde))
-                .peek((key, value) -> System.out.println("[PAYMENT-SERVICE] Key="+ key +", Value="+ value));
+                .peek((key, value) -> logger.info("[PAYMENT-SERVICE] Key="+ key +", Value="+ value));
 
         KeyValueBytesStoreSupplier customerOrderStoreSupplier =
                 Stores.persistentKeyValueStore(kafkaProperties.getCustomerOrdersStore());
@@ -48,13 +50,13 @@ public class KafkaStream {
                 .selectKey((k, v) -> v.getCustomerId())
                 .groupByKey(Grouped.with(stringSerde, orderFullEventSerde))
                 .aggregate(
-                        () -> new PaymentReservationEvent(Randomizer.generate(BigDecimal.ONE, BigDecimal.valueOf(50_000))),
+                        () -> new PaymentReservationEvent(BigDecimal.valueOf(50000)),
                         new ReservationAggregator(kafkaTemplate, kafkaProperties),
                         Materialized.<String, PaymentReservationEvent>as(customerOrderStoreSupplier)
                                 .withKeySerde(stringSerde)
                                 .withValueSerde(reservationEventSerde))
                 .toStream()
-                .peek((key, value) -> System.out.println("Key="+ key +", Value="+ value));
+                .peek((key, value) -> logger.info("Key="+ key +", Value="+ value));
 
         return incomingOrderCalculatedEvent;
     }

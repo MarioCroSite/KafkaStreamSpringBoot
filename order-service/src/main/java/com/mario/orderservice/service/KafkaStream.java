@@ -7,6 +7,8 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.Stores;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,7 +18,7 @@ import java.time.Duration;
 
 @Configuration
 public class KafkaStream {
-
+    private static final Logger logger = LoggerFactory.getLogger(KafkaStream.class);
 
     @Autowired
     OrderManager orderManager;
@@ -28,14 +30,14 @@ public class KafkaStream {
         var orderFullEventSerde = new JsonSerde<>(OrderFullEvent.class);
 
         var stream = streamsBuilder
-                .stream("payment-orders", Consumed.with(stringSerde, orderFullEventSerde));
+                .stream(kafkaProperties.getPaymentOrders(), Consumed.with(stringSerde, orderFullEventSerde));
 
-        stream.join(streamsBuilder.stream("stock-orders"),
+        stream.join(streamsBuilder.stream(kafkaProperties.getStockOrders()),
                 orderManager::confirm,
                 JoinWindows.of(Duration.ofSeconds(10)),
                 StreamJoined.with(stringSerde, orderFullEventSerde, orderFullEventSerde))
-                .peek((key, value) -> System.out.println("[ORDER-SERVICE] Key="+ key +", Value="+ value))
-                .to("orders-full");
+                .peek((key, value) -> logger.info("[ORDER-SERVICE] Key="+ key +", Value="+ value))
+                .to(kafkaProperties.getOrderFullTopic());
 
         return stream;
     }

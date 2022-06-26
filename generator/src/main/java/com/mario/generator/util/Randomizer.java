@@ -24,15 +24,15 @@ public class Randomizer {
 
     public static String getCustomerId() {
         var customerIds = List.of(
-                "f50ec468-f5ec-4ba4-ba60-32b14c3f0f01",
-                "f50ec468-f5ec-4ba4-ba60-32b14c3f0f02",
-                "f50ec468-f5ec-4ba4-ba60-32b14c3f0f03",
-                "f50ec468-f5ec-4ba4-ba60-32b14c3f0f04",
-                "f50ec468-f5ec-4ba4-ba60-32b14c3f0f05",
-                "f50ec468-f5ec-4ba4-ba60-32b14c3f0f06",
-                "f50ec468-f5ec-4ba4-ba60-32b14c3f0f07",
-                "f50ec468-f5ec-4ba4-ba60-32b14c3f0f08",
-                "f50ec468-f5ec-4ba4-ba60-32b14c3f0f09",
+                //"f50ec468-f5ec-4ba4-ba60-32b14c3f0f01",
+                //"f50ec468-f5ec-4ba4-ba60-32b14c3f0f02",
+                //"f50ec468-f5ec-4ba4-ba60-32b14c3f0f03",
+                //"f50ec468-f5ec-4ba4-ba60-32b14c3f0f04",
+                //"f50ec468-f5ec-4ba4-ba60-32b14c3f0f05",
+                //"f50ec468-f5ec-4ba4-ba60-32b14c3f0f06",
+                //"f50ec468-f5ec-4ba4-ba60-32b14c3f0f07",
+                //"f50ec468-f5ec-4ba4-ba60-32b14c3f0f08",
+                //"f50ec468-f5ec-4ba4-ba60-32b14c3f0f09",
                 "f50ec468-f5ec-4ba4-ba60-32b14c3f0f10");
 
         return customerIds.get(new Random().nextInt(customerIds.size()));
@@ -40,15 +40,15 @@ public class Randomizer {
 
     public static String getMarketId() {
         var marketIds = List.of(
-                "30a4496d-ffb5-4235-bbdd-68123d6dcd01",
-                "30a4496d-ffb5-4235-bbdd-68123d6dcd02",
-                "30a4496d-ffb5-4235-bbdd-68123d6dcd03",
-                "30a4496d-ffb5-4235-bbdd-68123d6dcd04",
-                "30a4496d-ffb5-4235-bbdd-68123d6dcd05",
-                "30a4496d-ffb5-4235-bbdd-68123d6dcd06",
-                "30a4496d-ffb5-4235-bbdd-68123d6dcd07",
-                "30a4496d-ffb5-4235-bbdd-68123d6dcd08",
-                "30a4496d-ffb5-4235-bbdd-68123d6dcd09",
+                //"30a4496d-ffb5-4235-bbdd-68123d6dcd01",
+                //"30a4496d-ffb5-4235-bbdd-68123d6dcd02",
+                //"30a4496d-ffb5-4235-bbdd-68123d6dcd03",
+                //"30a4496d-ffb5-4235-bbdd-68123d6dcd04",
+                //"30a4496d-ffb5-4235-bbdd-68123d6dcd05",
+                //"30a4496d-ffb5-4235-bbdd-68123d6dcd06",
+                //"30a4496d-ffb5-4235-bbdd-68123d6dcd07",
+                //"30a4496d-ffb5-4235-bbdd-68123d6dcd08",
+                //"30a4496d-ffb5-4235-bbdd-68123d6dcd09",
                 "30a4496d-ffb5-4235-bbdd-68123d6dcd10");
 
         return marketIds.get(new Random().nextInt(marketIds.size()));
@@ -57,11 +57,11 @@ public class Randomizer {
     public static List<Product> getProducts() {
         List<Product> products = new ArrayList<>();
 
-        IntStream.range(1, generate(1, 20)).forEach(i ->
+        IntStream.range(1, generate(1, 10)).forEach(i ->
                 products.add(Product.ProductBuilder.aProduct()
                         .withId(UUID.randomUUID().toString())
-                        .withPrice(generate(BigDecimal.valueOf(10), BigDecimal.valueOf(5000)))
-                        .withName("Product " + generate(1, 20))
+                        .withPrice(generate(BigDecimal.valueOf(10), BigDecimal.valueOf(1000)))
+                        .withName("Product " + generate(1, 10))
                         .build())
         );
 

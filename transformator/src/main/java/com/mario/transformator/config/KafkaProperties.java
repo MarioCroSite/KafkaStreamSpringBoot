@@ -3,6 +3,7 @@ package com.mario.transformator.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Configuration
@@ -10,9 +11,13 @@ import java.util.List;
 public class KafkaProperties {
     private String orderTopic;
     private String orderFullTopic;
+    private String valuableCustomer;
     private String applicationId;
     private List<String> bootstrapServers;
     private String securityProtocol;
+    private String consumerGroupId;
+    private String trustedPackages;
+    private BigDecimal valuableCustomerThreshold;
 
     public String getOrderTopic() {
         return orderTopic;
@@ -28,6 +33,14 @@ public class KafkaProperties {
 
     public void setOrderFullTopic(String orderFullTopic) {
         this.orderFullTopic = orderFullTopic;
+    }
+
+    public String getValuableCustomer() {
+        return valuableCustomer;
+    }
+
+    public void setValuableCustomer(String valuableCustomer) {
+        this.valuableCustomer = valuableCustomer;
     }
 
     public String getApplicationId() {
@@ -54,14 +67,42 @@ public class KafkaProperties {
         this.securityProtocol = securityProtocol;
     }
 
+    public String getConsumerGroupId() {
+        return consumerGroupId;
+    }
+
+    public void setConsumerGroupId(String consumerGroupId) {
+        this.consumerGroupId = consumerGroupId;
+    }
+
+    public String getTrustedPackages() {
+        return trustedPackages;
+    }
+
+    public void setTrustedPackages(String trustedPackages) {
+        this.trustedPackages = trustedPackages;
+    }
+
+    public BigDecimal getValuableCustomerThreshold() {
+        return valuableCustomerThreshold;
+    }
+
+    public void setValuableCustomerThreshold(BigDecimal valuableCustomerThreshold) {
+        this.valuableCustomerThreshold = valuableCustomerThreshold;
+    }
+
     @Override
     public String toString() {
         return "KafkaProperties{" +
                 "orderTopic='" + orderTopic + '\'' +
                 ", orderFullTopic='" + orderFullTopic + '\'' +
+                ", valuableCustomer='" + valuableCustomer + '\'' +
                 ", applicationId='" + applicationId + '\'' +
                 ", bootstrapServers=" + bootstrapServers +
                 ", securityProtocol='" + securityProtocol + '\'' +
+                ", consumerGroupId='" + consumerGroupId + '\'' +
+                ", trustedPackages='" + trustedPackages + '\'' +
+                ", valuableCustomerThreshold=" + valuableCustomerThreshold +
                 '}';
     }
 

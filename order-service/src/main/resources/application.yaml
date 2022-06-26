@@ -1,6 +1,10 @@
 com:
   mario:
     kafka:
+      payment-orders: "payment-orders"
+      stock-orders: "stock-orders"
+      order-full-topic: "orders-full"
+
       bootstrap-servers:
         - localhost:9091
         - localhost:9092
