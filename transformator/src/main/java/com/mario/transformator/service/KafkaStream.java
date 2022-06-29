@@ -6,6 +6,7 @@ import com.mario.events.OrderPartialEvent;
 import com.mario.transformator.config.KafkaProperties;
 import com.mario.transformator.handlers.OrderFullEventTransformer;
 import com.mario.transformator.handlers.OrderPartialEventTransformer;
+import com.mario.pojo.ExecutionResult;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.*;
@@ -30,34 +31,51 @@ public class KafkaStream {
 
         var incomingOrderEvent = streamsBuilder
                 .stream(kafkaProperties.getOrderTopic(), Consumed.with(stringSerde, orderEventSerde))
-                .peek((key, value) -> logger.info("[TRANSFORMER] Key="+ key +", Value="+ value));
+                .peek((key, value) -> logger.info("[TRANSFORMER-IN] Key="+ key +", Value="+ value));
 
         var orderFullEventEvent = incomingOrderEvent.transformValues(OrderFullEventTransformer::new);
 
-        orderFullEventEvent
+        var branchOrderFullEvent = orderFullEventEvent
+                .split(Named.as("branch-"))
+                .branch((key, value) -> value.isSuccess(), Branched.as("success"))
+                .defaultBranch(Branched.as("error"));
+
+        branchOrderFullEvent
+                .get("branch-success")
+                .mapValues(ExecutionResult::getData)
+                .peek((key, value) -> logger.info("[TRANSFORMER-OUT] Key="+ key +", Value="+ value))
                 .to(kafkaProperties.getOrderFullTopic(), Produced.with(stringSerde, orderFullEventSerde));
 
-        orderFullEventEvent
-                .filter((k, v) -> v.getPrice().compareTo(kafkaProperties.getValuableCustomerThreshold()) >= 1)
-                .to(kafkaProperties.getValuableCustomer(), Produced.with(stringSerde, orderFullEventSerde));
+        branchOrderFullEvent
+                .get("branch-error")
+                .peek((key, value) -> logger.info("[TRANSFORMER-ERROR] Key="+ key +", Value="+ value));
+
+//        orderFullEventEvent
+//                .to(kafkaProperties.getOrderFullTopic(), Produced.with(stringSerde, orderFullEventSerde));
+
+
+//        orderFullEventEvent
+//                .filter((k, v) -> v.getPrice().compareTo(kafkaProperties.getValuableCustomerThreshold()) >= 1)
+//                .to(kafkaProperties.getValuableCustomer(), Produced.with(stringSerde, orderFullEventSerde));
+
 
         //https://www.youtube.com/watch?v=zYGzJYkqUEA&t=250s
         //Split, Merge (productCount)
-        var productCountBranch = orderFullEventEvent
-                .split(Named.as("branches-"))
-                .branch((key, event) -> event.getProductCount() >= 10, Branched.as("full-cart"))
-                .branch((key, event) -> event.getProductCount() >= 5, Branched.as("half-full-cart"))
-                .defaultBranch(Branched.as("mini-cart"));
-
-        productCountBranch
-                .get("branches-full-cart")
-                .merge(productCountBranch.get("branches-mini-cart"))
-                .mapValues(event -> new OrderPartialEventTransformer().transform(event))
-                .to("full-mini-cart", Produced.with(stringSerde, orderPartialEventSerde));
-
-        productCountBranch
-                .get("branches-half-full-cart")
-                .to("half-full-cart", Produced.with(stringSerde, orderFullEventSerde));
+//        var productCountBranch = orderFullEventEvent
+//                .split(Named.as("branches-"))
+//                .branch((key, event) -> event.getProductCount() >= 10, Branched.as("full-cart"))
+//                .branch((key, event) -> event.getProductCount() >= 5, Branched.as("half-full-cart"))
+//                .defaultBranch(Branched.as("mini-cart"));
+//
+//        productCountBranch
+//                .get("branches-full-cart")
+//                .merge(productCountBranch.get("branches-mini-cart"))
+//                .mapValues(event -> new OrderPartialEventTransformer().transform(event))
+//                .to("full-mini-cart", Produced.with(stringSerde, orderPartialEventSerde));
+//
+//        productCountBranch
+//                .get("branches-half-full-cart")
+//                .to("half-full-cart", Produced.with(stringSerde, orderFullEventSerde));
 
 
         return incomingOrderEvent;

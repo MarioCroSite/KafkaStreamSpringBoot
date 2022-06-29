@@ -1,0 +1,80 @@
+package com.mario.stockservice.handlers;
+
+import com.mario.events.OrderFullEvent;
+import com.mario.events.Source;
+import com.mario.events.Status;
+import com.mario.events.StockReservationEvent;
+import com.mario.pojo.ExecutionResult;
+import com.mario.stockservice.config.KafkaProperties;
+import org.apache.kafka.streams.kstream.ValueTransformerWithKey;
+import org.apache.kafka.streams.processor.ProcessorContext;
+import org.apache.kafka.streams.state.KeyValueStore;
+import org.springframework.kafka.core.KafkaTemplate;
+
+public class ReservationProcessor implements ValueTransformerWithKey<String, OrderFullEvent, ExecutionResult<OrderFullEvent>> {
+
+    private final String storeName;
+    private final StockReservationEvent initialSeed;
+    private KeyValueStore<String, StockReservationEvent> stateStore;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final KafkaProperties kafkaProperties;
+
+    public ReservationProcessor(String storeName,
+                                StockReservationEvent initialSeed,
+                                KafkaTemplate<String, Object> kafkaTemplate,
+                                KafkaProperties kafkaProperties) {
+        this.storeName = storeName;
+        this.initialSeed = initialSeed;
+        this.kafkaTemplate = kafkaTemplate;
+        this.kafkaProperties = kafkaProperties;
+    }
+
+    @Override
+    public void init(ProcessorContext context) {
+        stateStore = context.getStateStore(storeName);
+    }
+
+    @Override
+    public ExecutionResult<OrderFullEvent> transform(String key, OrderFullEvent orderEvent) {
+        var reservation = stateStore.get(key);
+        if(reservation == null) {
+            reservation = initialSeed;
+        }
+
+        try {
+            switch (orderEvent.getStatus()) {
+                case CONFIRMED:
+                    reservation.setItemsReserved(reservation.getItemsReserved() - orderEvent.getProductCount());
+                    break;
+                case ROLLBACK:
+                    if(orderEvent.getSource() != null && !orderEvent.getSource().equals(Source.STOCK)) {
+                        reservation.setItemsAvailable(reservation.getItemsAvailable() + orderEvent.getProductCount());
+                        reservation.setItemsReserved(reservation.getItemsReserved() - orderEvent.getProductCount());
+                    }
+                    break;
+                case NEW:
+                    if(orderEvent.getProductCount() <= reservation.getItemsAvailable()) {
+                        reservation.setItemsAvailable(reservation.getItemsAvailable() - orderEvent.getProductCount());
+                        reservation.setItemsReserved(reservation.getItemsReserved() + orderEvent.getProductCount());
+                        orderEvent.setStatus(Status.ACCEPT);
+                    } else {
+                        orderEvent.setStatus(Status.REJECT);
+                    }
+
+                    kafkaTemplate.send(kafkaProperties.getStockOrders(), orderEvent.getId(), orderEvent);
+            }
+            stateStore.put(key, reservation);
+            return ExecutionResult.success(orderEvent);
+        } catch (Exception e) {
+            return ExecutionResult.error(new Error(e.getMessage()));
+        }
+    }
+
+
+
+    @Override
+    public void close() {
+
+    }
+
+}

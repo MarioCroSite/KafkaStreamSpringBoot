@@ -3,32 +3,41 @@ package com.mario.orderservice.service;
 import com.mario.events.OrderFullEvent;
 import com.mario.events.Source;
 import com.mario.events.Status;
-import org.springframework.stereotype.Service;
+import com.mario.pojo.ExecutionResult;
+import org.apache.kafka.streams.kstream.ValueJoiner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Service
-public class OrderManager {
+public class OrderManager implements ValueJoiner<OrderFullEvent, OrderFullEvent, ExecutionResult<OrderFullEvent>> {
 
-    public OrderFullEvent confirm(OrderFullEvent payment, OrderFullEvent stock) {
-        OrderFullEvent orderFullEvent = OrderFullEvent.OrderCalculatedEventBuilder.aOrderCalculatedEvent()
-                .withId(payment.getId())
-                .withCustomerId(payment.getCustomerId())
-                .withMarketId(payment.getMarketId())
-                .withProductCount(payment.getProductCount())
-                .withPrice(payment.getPrice())
-                .withProducts(payment.getProducts())
-                .build();
+    private static final Logger logger = LoggerFactory.getLogger(OrderManager.class);
 
-        if(payment.getStatus().equals(Status.ACCEPT) && stock.getStatus().equals(Status.ACCEPT)) {
-            orderFullEvent.setStatus(Status.CONFIRMED);
-        } else if(payment.getStatus().equals(Status.REJECT) && stock.getStatus().equals(Status.REJECT)) {
-            orderFullEvent.setStatus(Status.REJECT);
-        } else if(payment.getStatus().equals(Status.REJECT) || stock.getStatus().equals(Status.REJECT)) {
-            Source source = payment.getStatus().equals(Status.REJECT) ? Source.PAYMENT : Source.STOCK;
-            orderFullEvent.setStatus(Status.ROLLBACK);
-            orderFullEvent.setSource(source);
+    @Override
+    public ExecutionResult<OrderFullEvent> apply(OrderFullEvent payment, OrderFullEvent stock) {
+        try {
+            OrderFullEvent orderFullEvent = OrderFullEvent.OrderCalculatedEventBuilder.aOrderCalculatedEvent()
+                    .withId(payment.getId())
+                    .withCustomerId(payment.getCustomerId())
+                    .withMarketId(payment.getMarketId())
+                    .withProductCount(payment.getProductCount())
+                    .withPrice(payment.getPrice())
+                    .withProducts(payment.getProducts())
+                    .build();
+
+            if(payment.getStatus().equals(Status.ACCEPT) && stock.getStatus().equals(Status.ACCEPT)) {
+                orderFullEvent.setStatus(Status.CONFIRMED);
+            } else if(payment.getStatus().equals(Status.REJECT) && stock.getStatus().equals(Status.REJECT)) {
+                orderFullEvent.setStatus(Status.REJECT);
+            } else if(payment.getStatus().equals(Status.REJECT) || stock.getStatus().equals(Status.REJECT)) {
+                Source source = payment.getStatus().equals(Status.REJECT) ? Source.PAYMENT : Source.STOCK;
+                orderFullEvent.setStatus(Status.ROLLBACK);
+                orderFullEvent.setSource(source);
+            }
+            return ExecutionResult.success(orderFullEvent);
+        } catch (Exception e) {
+            logger.info("Error happen while joining payment and stock {}", e.getMessage());
+            return ExecutionResult.error(new Error(e.getMessage()));
         }
-
-        return orderFullEvent;
     }
 
 }

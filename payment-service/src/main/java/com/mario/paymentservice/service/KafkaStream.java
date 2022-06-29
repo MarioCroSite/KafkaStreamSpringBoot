@@ -2,15 +2,16 @@ package com.mario.paymentservice.service;
 
 import com.mario.events.OrderFullEvent;
 import com.mario.events.PaymentReservationEvent;
+import com.mario.events.StockReservationEvent;
 import com.mario.paymentservice.config.KafkaProperties;
-import com.mario.paymentservice.handlers.ReservationAggregator;
+import com.mario.paymentservice.handlers.ReservationProcessor;
+import com.mario.pojo.ExecutionResult;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.kstream.Consumed;
-import org.apache.kafka.streams.kstream.Grouped;
-import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.Materialized;
+import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
+import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,41 +25,69 @@ import java.math.BigDecimal;
 @Configuration
 public class KafkaStream {
     private static final Logger logger = LoggerFactory.getLogger(KafkaStream.class);
-
-    KafkaTemplate<String, Object> kafkaTemplate;
+    private static final String STORE_NAME = "CUSTOMER_KAFKA_STORE";
+    private final PaymentReservationEvent initialSeed;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     public KafkaStream(KafkaTemplate<String, Object> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
+        initialSeed = new PaymentReservationEvent(BigDecimal.valueOf(50000));
     }
 
     @Bean
     public KStream<String, OrderFullEvent> kStream(StreamsBuilder streamsBuilder,
                                                    KafkaProperties kafkaProperties) {
+        streamsBuilder.addStateStore(getStoreBuilder());
 
         var stringSerde = Serdes.String();
         var orderFullEventSerde = new JsonSerde<>(OrderFullEvent.class);
-        var reservationEventSerde = new JsonSerde<>(PaymentReservationEvent.class);
+        //var reservationEventSerde = new JsonSerde<>(PaymentReservationEvent.class);
 
-        var incomingOrderCalculatedEvent = streamsBuilder
+        var incomingOrderFullEvent = streamsBuilder
                 .stream(kafkaProperties.getOrderFullTopic(), Consumed.with(stringSerde, orderFullEventSerde))
-                .peek((key, value) -> logger.info("[PAYMENT-SERVICE] Key="+ key +", Value="+ value));
+                .peek((key, value) -> logger.info("[PAYMENT-SERVICE IN] Key="+ key +", Value="+ value));
 
-        KeyValueBytesStoreSupplier customerOrderStoreSupplier =
-                Stores.persistentKeyValueStore(kafkaProperties.getCustomerOrdersStore());
+        //KeyValueBytesStoreSupplier customerOrderStoreSupplier =
+                //Stores.persistentKeyValueStore(kafkaProperties.getCustomerOrdersStore());
+                //Stores.inMemoryKeyValueStore(kafkaProperties.getCustomerOrdersStore());
 
-        incomingOrderCalculatedEvent
+        var aggregateCustomerAmount = incomingOrderFullEvent
                 .selectKey((k, v) -> v.getCustomerId())
-                .groupByKey(Grouped.with(stringSerde, orderFullEventSerde))
-                .aggregate(
-                        () -> new PaymentReservationEvent(BigDecimal.valueOf(50000)),
-                        new ReservationAggregator(kafkaTemplate, kafkaProperties),
-                        Materialized.<String, PaymentReservationEvent>as(customerOrderStoreSupplier)
-                                .withKeySerde(stringSerde)
-                                .withValueSerde(reservationEventSerde))
-                .toStream()
-                .peek((key, value) -> logger.info("Key="+ key +", Value="+ value));
+                .transformValues(() -> new ReservationProcessor(STORE_NAME, initialSeed, kafkaTemplate, kafkaProperties), STORE_NAME);
 
-        return incomingOrderCalculatedEvent;
+//                .groupByKey(Grouped.with(stringSerde, orderFullEventSerde))
+//                .aggregate(
+//                        () -> new PaymentReservationEvent(BigDecimal.valueOf(50000)),
+//                        new ReservationAggregator(kafkaTemplate, kafkaProperties),
+//                        Materialized.<String, PaymentReservationEvent>as(customerOrderStoreSupplier)
+//                                .withKeySerde(stringSerde)
+//                                .withValueSerde(reservationEventSerde))
+//                .toStream()
+//                .peek((key, value) -> logger.info("Key="+ key +", Value="+ value));
+
+        var branchAggregateCustomerAmount = aggregateCustomerAmount
+                .split(Named.as("branch-"))
+                .branch((key, value) -> value.isSuccess(), Branched.as("success"))
+                .defaultBranch(Branched.as("error"));
+
+        branchAggregateCustomerAmount
+                .get("branch-success")
+                .mapValues(ExecutionResult::getData)
+                .peek((key, value) -> logger.info("[PAYMENT-SERVICE SUCCESS] Key="+ key +", Value="+ value));
+
+        branchAggregateCustomerAmount
+                .get("branch-error")
+                .peek((key, value) -> logger.info("[PAYMENT-SERVICE ERROR] Key="+ key +", Value="+ value));
+
+        return incomingOrderFullEvent;
+    }
+
+    private StoreBuilder<KeyValueStore<String, PaymentReservationEvent>> getStoreBuilder() {
+        return Stores.keyValueStoreBuilder(storeSupplier(), Serdes.String(), new JsonSerde<>(PaymentReservationEvent.class));
+    }
+
+    public KeyValueBytesStoreSupplier storeSupplier() {
+        return Stores.inMemoryKeyValueStore(STORE_NAME);
     }
 
 }
