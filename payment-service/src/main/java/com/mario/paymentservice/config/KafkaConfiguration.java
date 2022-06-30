@@ -40,6 +40,7 @@ public class KafkaConfiguration {
         properties.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaProperties.getBootstrapServers());
         properties.put(StreamsConfig.SECURITY_PROTOCOL_CONFIG, kafkaProperties.getSecurityProtocol());
         properties.put(StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG, LogAndContinueExceptionHandler.class);
+        //properties.put(StreamsConfig.STATE_DIR_CONFIG, "/tmp/kafka-streams");
         return new KafkaStreamsConfiguration(properties);
     }
 

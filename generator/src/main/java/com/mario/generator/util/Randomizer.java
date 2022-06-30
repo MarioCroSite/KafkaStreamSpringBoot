@@ -57,7 +57,7 @@ public class Randomizer {
     public static List<Product> getProducts() {
         List<Product> products = new ArrayList<>();
 
-        IntStream.range(1, generate(1, 10)).forEach(i ->
+        IntStream.range(0, generate(1, 10)).forEach(i ->
                 products.add(Product.ProductBuilder.aProduct()
                         .withId(UUID.randomUUID().toString())
                         .withPrice(generate(BigDecimal.valueOf(10), BigDecimal.valueOf(1000)))
