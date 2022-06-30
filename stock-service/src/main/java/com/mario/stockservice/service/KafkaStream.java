@@ -23,12 +23,10 @@ import org.springframework.kafka.support.serializer.JsonSerde;
 public class KafkaStream {
     private static final Logger logger = LoggerFactory.getLogger(KafkaStream.class);
     private static final String STORE_NAME = "MARKET_KAFKA_STORE";
-    private final StockReservationEvent initialSeed;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     public KafkaStream(KafkaTemplate<String, Object> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
-        initialSeed = new StockReservationEvent(1000);
     }
 
     @Bean
@@ -49,7 +47,7 @@ public class KafkaStream {
 
         var aggregateMarketItems = incomingOrderFullEvent
                .selectKey((k, v) -> v.getMarketId())
-               .transformValues(() -> new ReservationProcessor(STORE_NAME, initialSeed, kafkaTemplate, kafkaProperties), STORE_NAME);
+               .transformValues(() -> new ReservationProcessor(STORE_NAME, kafkaTemplate, kafkaProperties), STORE_NAME);
 
 //               .groupByKey(Grouped.with(stringSerde, orderFullEventSerde))
 //               .aggregate(

@@ -1,30 +1,21 @@
 package com.mario.transformator.handlers;
 
-import com.mario.events.OrderEvent;
-import com.mario.events.OrderFullEvent;
-import com.mario.events.Product;
-import com.mario.events.Status;
+import com.mario.events.*;
 import com.mario.pojo.ExecutionResult;
-import org.apache.kafka.streams.kstream.ValueTransformer;
-import org.apache.kafka.streams.processor.ProcessorContext;
+import org.apache.kafka.streams.kstream.ValueMapper;
 
 import java.math.BigDecimal;
 
-public class OrderFullEventTransformer implements ValueTransformer<OrderEvent, ExecutionResult<OrderFullEvent>> {
+public class OrderFullEventTransformer implements ValueMapper<OrderEvent, ExecutionResult<OrderFullEvent>> {
 
     @Override
-    public void init(ProcessorContext processorContext) {
-
-    }
-
-    @Override
-    public ExecutionResult<OrderFullEvent> transform(OrderEvent orderEvent) {
+    public ExecutionResult<OrderFullEvent> apply(OrderEvent orderEvent) {
         try {
             return ExecutionResult.success(OrderFullEvent.OrderCalculatedEventBuilder.aOrderCalculatedEvent()
                     .withId(orderEvent.getId())
                     .withCustomerId(orderEvent.getCustomerId())
                     .withMarketId(orderEvent.getMarketId())
-                    .withProductCount(orderEvent.getProducts().size())
+                    .withProductCount(orderEvent.getProducts().size() % 2 == 0 ? orderEvent.getProducts().size() : (1/0)) //for testing error
                     .withPrice(orderEvent.getProducts().stream().map(Product::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add))
                     .withProducts(orderEvent.getProducts())
                     .withStatus(Status.NEW)
@@ -34,8 +25,4 @@ public class OrderFullEventTransformer implements ValueTransformer<OrderEvent, E
         }
     }
 
-    @Override
-    public void close() {
-
-    }
 }

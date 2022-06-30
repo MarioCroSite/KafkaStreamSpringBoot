@@ -2,7 +2,6 @@ package com.mario.paymentservice.service;
 
 import com.mario.events.OrderFullEvent;
 import com.mario.events.PaymentReservationEvent;
-import com.mario.events.StockReservationEvent;
 import com.mario.paymentservice.config.KafkaProperties;
 import com.mario.paymentservice.handlers.ReservationProcessor;
 import com.mario.pojo.ExecutionResult;
@@ -20,18 +19,14 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.serializer.JsonSerde;
 
-import java.math.BigDecimal;
-
 @Configuration
 public class KafkaStream {
     private static final Logger logger = LoggerFactory.getLogger(KafkaStream.class);
     private static final String STORE_NAME = "CUSTOMER_KAFKA_STORE";
-    private final PaymentReservationEvent initialSeed;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     public KafkaStream(KafkaTemplate<String, Object> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
-        initialSeed = new PaymentReservationEvent(BigDecimal.valueOf(50000));
     }
 
     @Bean
@@ -53,7 +48,7 @@ public class KafkaStream {
 
         var aggregateCustomerAmount = incomingOrderFullEvent
                 .selectKey((k, v) -> v.getCustomerId())
-                .transformValues(() -> new ReservationProcessor(STORE_NAME, initialSeed, kafkaTemplate, kafkaProperties), STORE_NAME);
+                .transformValues(() -> new ReservationProcessor(STORE_NAME, kafkaTemplate, kafkaProperties), STORE_NAME);
 
 //                .groupByKey(Grouped.with(stringSerde, orderFullEventSerde))
 //                .aggregate(

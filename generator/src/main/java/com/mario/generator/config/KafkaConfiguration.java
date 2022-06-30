@@ -36,7 +36,6 @@ public class KafkaConfiguration {
         return TopicBuilder.name("orders")
                 .partitions(3)
                 .replicas(2)
-                //.compact()
                 .build();
     }
 
@@ -45,7 +44,6 @@ public class KafkaConfiguration {
         return TopicBuilder.name("orders-full")
                 .partitions(3)
                 .replicas(2)
-                //.compact()
                 .build();
     }
 
@@ -54,7 +52,6 @@ public class KafkaConfiguration {
         return TopicBuilder.name("payment-orders")
                 .partitions(3)
                 .replicas(2)
-                //.compact()
                 .build();
     }
 
@@ -63,7 +60,6 @@ public class KafkaConfiguration {
         return TopicBuilder.name("stock-orders")
                 .partitions(3)
                 .replicas(2)
-                //.compact()
                 .build();
     }
 

@@ -29,7 +29,7 @@ public class GeneratorService {
                 .withMarketId(Randomizer.getMarketId())
                 .build();
 
-        kafkaTemplate.send(kafkaProperties.getOrderTopic(), event.getCustomerId(), event);
+        kafkaTemplate.send(kafkaProperties.getOrderTopic(), event.getId(), event);
     }
 
 }

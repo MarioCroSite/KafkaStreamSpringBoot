@@ -14,17 +14,14 @@ import org.springframework.kafka.core.KafkaTemplate;
 public class ReservationProcessor implements ValueTransformerWithKey<String, OrderFullEvent, ExecutionResult<OrderFullEvent>> {
 
     private final String storeName;
-    private final StockReservationEvent initialSeed;
     private KeyValueStore<String, StockReservationEvent> stateStore;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final KafkaProperties kafkaProperties;
 
     public ReservationProcessor(String storeName,
-                                StockReservationEvent initialSeed,
                                 KafkaTemplate<String, Object> kafkaTemplate,
                                 KafkaProperties kafkaProperties) {
         this.storeName = storeName;
-        this.initialSeed = initialSeed;
         this.kafkaTemplate = kafkaTemplate;
         this.kafkaProperties = kafkaProperties;
     }
@@ -36,10 +33,7 @@ public class ReservationProcessor implements ValueTransformerWithKey<String, Ord
 
     @Override
     public ExecutionResult<OrderFullEvent> transform(String key, OrderFullEvent orderEvent) {
-        var reservation = stateStore.get(key);
-        if(reservation == null) {
-            reservation = initialSeed;
-        }
+        var reservation = getStateStore(key);
 
         try {
             switch (orderEvent.getStatus()) {
@@ -47,7 +41,7 @@ public class ReservationProcessor implements ValueTransformerWithKey<String, Ord
                     reservation.setItemsReserved(reservation.getItemsReserved() - orderEvent.getProductCount());
                     break;
                 case ROLLBACK:
-                    if(orderEvent.getSource() != null && !orderEvent.getSource().equals(Source.STOCK)) {
+                    if(orderEvent.getSource() != null && orderEvent.getSource().equals(Source.STOCK)) {
                         reservation.setItemsAvailable(reservation.getItemsAvailable() + orderEvent.getProductCount());
                         reservation.setItemsReserved(reservation.getItemsReserved() - orderEvent.getProductCount());
                     }
@@ -63,14 +57,24 @@ public class ReservationProcessor implements ValueTransformerWithKey<String, Ord
 
                     kafkaTemplate.send(kafkaProperties.getStockOrders(), orderEvent.getId(), orderEvent);
             }
-            stateStore.put(key, reservation);
+            addStateStore(key, reservation);
             return ExecutionResult.success(orderEvent);
         } catch (Exception e) {
             return ExecutionResult.error(new Error(e.getMessage()));
         }
     }
 
+    private StockReservationEvent getStateStore(String key) {
+        var reservation = stateStore.get(key);
+        if(reservation == null) {
+            reservation = new StockReservationEvent(1000);
+        }
+        return reservation;
+    }
 
+    private void addStateStore(String key, StockReservationEvent value) {
+        stateStore.put(key, value);
+    }
 
     @Override
     public void close() {

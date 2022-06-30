@@ -35,7 +35,7 @@ public class OrderManager implements ValueJoiner<OrderFullEvent, OrderFullEvent,
             }
             return ExecutionResult.success(orderFullEvent);
         } catch (Exception e) {
-            logger.info("Error happen while joining payment and stock {}", e.getMessage());
+            logger.error("Error happen while joining payment and stock {}", e.getMessage());
             return ExecutionResult.error(new Error(e.getMessage()));
         }
     }

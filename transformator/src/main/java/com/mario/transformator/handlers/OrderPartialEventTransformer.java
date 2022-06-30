@@ -5,7 +5,7 @@ import com.mario.events.*;
 
 public class OrderPartialEventTransformer {
 
-    public OrderPartialEvent transform(OrderFullEvent orderEvent) {
+    public static OrderPartialEvent transform(OrderFullEvent orderEvent) {
         return OrderPartialEvent.OrderPartialEventBuilder.aOrderPartialEvent()
                 .withId(orderEvent.getId())
                 .withProductCount(orderEvent.getProductCount())

@@ -27,6 +27,10 @@ public class ExecutionResult<T> {
         return error;
     }
 
+    public String getErrorMessage() {
+        return error.toString();
+    }
+
     public boolean isSuccess() {
         return success;
     }

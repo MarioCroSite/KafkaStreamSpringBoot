@@ -32,7 +32,7 @@ public class KafkaStream {
         var joiner = stream
                 .join(streamsBuilder.stream(kafkaProperties.getStockOrders()),
                         new OrderManager(),
-                        JoinWindows.of(Duration.ofSeconds(10)),
+                        JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
                         StreamJoined.with(stringSerde, orderFullEventSerde, orderFullEventSerde));
 
         var joinBranch = joiner
