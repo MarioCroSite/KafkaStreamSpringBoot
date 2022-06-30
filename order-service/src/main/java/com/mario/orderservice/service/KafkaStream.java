@@ -27,13 +27,15 @@ public class KafkaStream {
         var orderFullEventSerde = new JsonSerde<>(OrderFullEvent.class);
 
         var stream = streamsBuilder
-                .stream(kafkaProperties.getPaymentOrders(), Consumed.with(stringSerde, orderFullEventSerde));
+                .stream(kafkaProperties.getPaymentOrders(), Consumed.with(stringSerde, orderFullEventSerde))
+                .peek((key, value) -> logger.info("[JOIN BRANCH PAYMENT IN] Key="+ key +", Value="+ value));
 
         var joiner = stream
                 .join(streamsBuilder.stream(kafkaProperties.getStockOrders()),
                         new OrderManager(),
                         JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
-                        StreamJoined.with(stringSerde, orderFullEventSerde, orderFullEventSerde));
+                        StreamJoined.with(stringSerde, orderFullEventSerde, orderFullEventSerde))
+                .peek((key, value) -> logger.info("[JOIN BRANCH STOCK IN] Key="+ key +", Value="+ value));
 
         var joinBranch = joiner
                 .split(Named.as("branch-"))

@@ -2,6 +2,7 @@ package com.mario.paymentservice.service;
 
 import com.mario.events.OrderFullEvent;
 import com.mario.events.PaymentReservationEvent;
+import com.mario.events.Status;
 import com.mario.paymentservice.config.KafkaProperties;
 import com.mario.paymentservice.handlers.ReservationProcessor;
 import com.mario.pojo.ExecutionResult;
@@ -68,7 +69,11 @@ public class KafkaStream {
         branchAggregateCustomerAmount
                 .get("branch-success")
                 .mapValues(ExecutionResult::getData)
-                .peek((key, value) -> logger.info("[PAYMENT-SERVICE SUCCESS] Key="+ key +", Value="+ value));
+                .peek((key, value) -> logger.info("[PAYMENT-SERVICE SUCCESS] Key="+ key +", Value="+ value))
+                .filter((key, value) -> value.getStatus().equals(Status.ACCEPT) || value.getStatus().equals(Status.REJECT))
+                .selectKey((k, v) -> v.getId())
+                .peek((key, value) -> logger.info("[PAYMENT-SERVICE FILTERED NEW] Key="+ key +", Value="+ value))
+                .to(kafkaProperties.getPaymentOrders(), Produced.with(stringSerde, orderFullEventSerde));
 
         branchAggregateCustomerAmount
                 .get("branch-error")

@@ -1,6 +1,7 @@
 package com.mario.stockservice.service;
 
 import com.mario.events.OrderFullEvent;
+import com.mario.events.Status;
 import com.mario.events.StockReservationEvent;
 import com.mario.pojo.ExecutionResult;
 import com.mario.stockservice.config.KafkaProperties;
@@ -68,7 +69,11 @@ public class KafkaStream {
         branchAggregateMarketItems
                 .get("branch-success")
                 .mapValues(ExecutionResult::getData)
-                .peek((key, value) -> logger.info("[STOCK-SERVICE SUCCESS] Key="+ key +", Value="+ value));
+                .peek((key, value) -> logger.info("[STOCK-SERVICE SUCCESS] Key="+ key +", Value="+ value))
+                .filter((key, value) -> value.getStatus().equals(Status.ACCEPT) || value.getStatus().equals(Status.REJECT))
+                .selectKey((k, v) -> v.getId())
+                .peek((key, value) -> logger.info("[STOCK-SERVICE FILTERED NEW] Key="+ key +", Value="+ value))
+                .to((key, value, context) -> kafkaProperties.getStockOrders(), Produced.with(stringSerde, orderFullEventSerde));
 
         branchAggregateMarketItems
                 .get("branch-error")

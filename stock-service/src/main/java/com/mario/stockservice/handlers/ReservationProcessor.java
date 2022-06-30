@@ -55,7 +55,7 @@ public class ReservationProcessor implements ValueTransformerWithKey<String, Ord
                         orderEvent.setStatus(Status.REJECT);
                     }
 
-                    kafkaTemplate.send(kafkaProperties.getStockOrders(), orderEvent.getId(), orderEvent);
+                    //kafkaTemplate.send(kafkaProperties.getStockOrders(), orderEvent.getId(), orderEvent);
             }
             addStateStore(key, reservation);
             return ExecutionResult.success(orderEvent);

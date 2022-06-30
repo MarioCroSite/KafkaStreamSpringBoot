@@ -9,6 +9,7 @@ import com.mario.transformator.handlers.OrderPartialEventTransformer;
 import com.mario.pojo.ExecutionResult;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,10 +54,6 @@ public class KafkaStream {
                 .mapValues(ExecutionResult::getErrorMessage)
                 .peek((key, value) -> logger.info("[TRANSFORMER-ERROR] Key="+ key +", Value="+ value));
 
-        //Topology topology = streamsBuilder.build();
-        //System.out.println(topology.describe());
-        //https://zz85.github.io/kafka-streams-viz/
-
         successBranch
                 .filter((k, v) -> v.getPrice().compareTo(kafkaProperties.getValuableCustomerThreshold()) >= 1)
                 .to(kafkaProperties.getValuableCustomer(), Produced.with(stringSerde, orderFullEventSerde));
@@ -77,6 +74,11 @@ public class KafkaStream {
                 .get("branches-half-full-cart")
                 .to("half-full-cart", Produced.with(stringSerde, orderFullEventSerde));
 
+
+        //Topology topology = streamsBuilder.build();
+        //System.out.println(topology.describe());
+        //System.out.println("TOPOLOGY");
+        //https://zz85.github.io/kafka-streams-viz/
 
         return incomingOrderEvent;
     }
