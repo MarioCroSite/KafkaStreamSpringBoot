@@ -23,7 +23,7 @@ public class KafkaStream {
     private static final Logger logger = LoggerFactory.getLogger(KafkaStream.class);
 
     @Bean
-    public KStream<String, OrderEvent> kStream(StreamsBuilder streamsBuilder, KafkaProperties kafkaProperties) {
+    public static Topology topology(StreamsBuilder streamsBuilder, KafkaProperties kafkaProperties) {
 
         var stringSerde = Serdes.String();
         var orderEventSerde = new JsonSerde<>(OrderEvent.class);
@@ -52,7 +52,8 @@ public class KafkaStream {
         branchOrderFullEvent
                 .get("branch-error")
                 .mapValues(ExecutionResult::getErrorMessage)
-                .peek((key, value) -> logger.info("[TRANSFORMER-ERROR] Key="+ key +", Value="+ value));
+                .peek((key, value) -> logger.info("[TRANSFORMER-ERROR] Key="+ key +", Value="+ value))
+                .to("error-topic");
 
         successBranch
                 .filter((k, v) -> v.getPrice().compareTo(kafkaProperties.getValuableCustomerThreshold()) >= 1)
@@ -80,7 +81,7 @@ public class KafkaStream {
         //System.out.println("TOPOLOGY");
         //https://zz85.github.io/kafka-streams-viz/
 
-        return incomingOrderEvent;
+        return streamsBuilder.build();
     }
 
 }

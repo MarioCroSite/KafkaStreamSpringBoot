@@ -16,7 +16,7 @@ public class OrderFullEventTransformer implements ValueMapper<OrderEvent, Execut
                     .withCustomerId(orderEvent.getCustomerId())
                     .withMarketId(orderEvent.getMarketId())
                     //.withProductCount(orderEvent.getProducts().size())
-                    .withProductCount(orderEvent.getProducts().size() % 2 == 0 ? orderEvent.getProducts().size() : (1/0)) //for testing error
+                    .withProductCount(orderEvent.getProducts().size() == 4 ? (1/0) : orderEvent.getProducts().size()) //for testing error
                     .withPrice(orderEvent.getProducts().stream().map(Product::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add))
                     .withProducts(orderEvent.getProducts())
                     .withStatus(Status.NEW)
