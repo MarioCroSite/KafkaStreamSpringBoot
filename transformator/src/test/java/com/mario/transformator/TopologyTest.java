@@ -1,7 +1,6 @@
 package com.mario.transformator;
 
 import com.mario.events.*;
-import com.mario.transformator.config.KafkaProperties;
 import com.mario.transformator.service.KafkaStream;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.*;
@@ -10,8 +9,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.kafka.support.serializer.JsonSerde;
@@ -24,9 +21,8 @@ import java.util.UUID;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
 @ExtendWith({OutputCaptureExtension.class})
-class TopologyTest {
+class TopologyTest extends TestBase {
 
     TopologyTestDriver testDriver;
     private TestInputTopic<String, OrderEvent> orderEventTopic;
@@ -35,10 +31,7 @@ class TopologyTest {
     private TestOutputTopic<String, OrderFullEvent> valuableCustomerTopic;
     private TestOutputTopic<String, OrderPartialEvent> fullMiniCartTopic;
     private TestOutputTopic<String, OrderFullEvent> halfFullCartTopic;
-    private TestOutputTopic<String, String> errorTopic;
-
-    @Autowired
-    KafkaProperties kafkaProperties;
+    private TestOutputTopic<String, Error> errorTopic;
 
     @BeforeEach
     void setup() {
@@ -56,6 +49,7 @@ class TopologyTest {
         var orderEventSerde = new JsonSerde<>(OrderEvent.class);
         var orderFullEventSerde = new JsonSerde<>(OrderFullEvent.class);
         var orderPartialEventSerde = new JsonSerde<>(OrderPartialEvent.class);
+        var errorEventSerde = new JsonSerde<>(Error.class);
 
         orderEventTopic = testDriver.createInputTopic(kafkaProperties.getOrderTopic(), stringSerde.serializer(), orderEventSerde.serializer());
         orderEventStringTopic = testDriver.createInputTopic(kafkaProperties.getOrderTopic(), stringSerde.serializer(), stringSerde.serializer());
@@ -63,7 +57,7 @@ class TopologyTest {
         valuableCustomerTopic = testDriver.createOutputTopic(kafkaProperties.getValuableCustomer(), stringSerde.deserializer(), orderFullEventSerde.deserializer());
         fullMiniCartTopic = testDriver.createOutputTopic("full-mini-cart", stringSerde.deserializer(), orderPartialEventSerde.deserializer());
         halfFullCartTopic = testDriver.createOutputTopic("half-full-cart", stringSerde.deserializer(), orderFullEventSerde.deserializer());
-        errorTopic = testDriver.createOutputTopic("error-topic", stringSerde.deserializer(), stringSerde.deserializer());
+        errorTopic = testDriver.createOutputTopic("error-topic", stringSerde.deserializer(), errorEventSerde.deserializer());
     }
 
     @AfterEach
@@ -135,7 +129,7 @@ class TopologyTest {
 
         var errorResponseTopic = errorTopic.readKeyValue();
         assertEquals(errorResponseTopic.key, orderEventError.getId());
-        assertThat(errorResponseTopic.value).contains("java.lang.Error: / by zero");
+        assertThat(errorResponseTopic.value.toString()).contains("java.lang.Error: / by zero");
     }
 
     private void verifyInputOutputEvent(OrderEvent input, OrderFullEvent output) {

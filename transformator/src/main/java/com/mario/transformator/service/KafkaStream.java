@@ -29,6 +29,7 @@ public class KafkaStream {
         var orderEventSerde = new JsonSerde<>(OrderEvent.class);
         var orderFullEventSerde = new JsonSerde<>(OrderFullEvent.class);
         var orderPartialEventSerde = new JsonSerde<>(OrderPartialEvent.class);
+        var errorSerde = new JsonSerde<>(Error.class);
 
         var incomingOrderEvent = streamsBuilder
                 .stream(kafkaProperties.getOrderTopic(), Consumed.with(stringSerde, orderEventSerde))
@@ -51,9 +52,9 @@ public class KafkaStream {
 
         branchOrderFullEvent
                 .get("branch-error")
-                .mapValues(ExecutionResult::getErrorMessage)
+                .mapValues(ExecutionResult::getError)
                 .peek((key, value) -> logger.info("[TRANSFORMER-ERROR] Key="+ key +", Value="+ value))
-                .to("error-topic");
+                .to("error-topic",  Produced.with(stringSerde, errorSerde));
 
         successBranch
                 .filter((k, v) -> v.getPrice().compareTo(kafkaProperties.getValuableCustomerThreshold()) >= 1)
