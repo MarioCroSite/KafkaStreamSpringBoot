@@ -13,6 +13,11 @@ public class PaymentReservationEvent {
         this.amountAvailable = amountAvailable;
     }
 
+    public PaymentReservationEvent(BigDecimal amountAvailable, BigDecimal amountReserved) {
+        this.amountAvailable = amountAvailable;
+        this.amountReserved = amountReserved;
+    }
+
     public BigDecimal getAmountAvailable() {
         return amountAvailable;
     }

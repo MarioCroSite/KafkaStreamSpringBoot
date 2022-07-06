@@ -5,6 +5,7 @@ import com.mario.orderservice.config.KafkaProperties;
 import com.mario.pojo.ExecutionResult;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.Stores;
@@ -21,8 +22,7 @@ public class KafkaStream {
     private static final Logger logger = LoggerFactory.getLogger(KafkaStream.class);
 
     @Bean
-    public KStream<String, OrderFullEvent> kStream(StreamsBuilder streamsBuilder,
-                                                   KafkaProperties kafkaProperties) {
+    public static Topology topology(StreamsBuilder streamsBuilder, KafkaProperties kafkaProperties) {
         var stringSerde = Serdes.String();
         var orderFullEventSerde = new JsonSerde<>(OrderFullEvent.class);
 
@@ -50,9 +50,11 @@ public class KafkaStream {
 
         joinBranch
                 .get("branch-error")
-                .peek((key, value) -> logger.info("[JOIN BRANCH ERROR] Key="+ key +", Value="+ value));
+                .mapValues(ExecutionResult::getErrorMessage)
+                .peek((key, value) -> logger.info("[JOIN BRANCH ERROR] Key="+ key +", Value="+ value))
+                .to("error-topic");
 
-        return stream;
+        return streamsBuilder.build();
     }
 
 //    @Bean

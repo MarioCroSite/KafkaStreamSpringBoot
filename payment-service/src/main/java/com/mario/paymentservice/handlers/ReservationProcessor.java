@@ -2,6 +2,7 @@ package com.mario.paymentservice.handlers;
 
 import com.mario.events.*;
 import com.mario.paymentservice.config.KafkaProperties;
+import com.mario.paymentservice.util.PaymentUtils;
 import com.mario.pojo.ExecutionResult;
 import org.apache.kafka.streams.kstream.ValueTransformerWithKey;
 import org.apache.kafka.streams.processor.ProcessorContext;
@@ -14,15 +15,15 @@ public class ReservationProcessor implements ValueTransformerWithKey<String, Ord
 
     private final String storeName;
     private KeyValueStore<String, PaymentReservationEvent> stateStore;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
-    private final KafkaProperties kafkaProperties;
+    //private final KafkaTemplate<String, Object> kafkaTemplate;
+    //private final KafkaProperties kafkaProperties;
 
-    public ReservationProcessor(String storeName,
-                                KafkaTemplate<String, Object> kafkaTemplate,
-                                KafkaProperties kafkaProperties) {
+    public ReservationProcessor(String storeName
+                                /*KafkaTemplate<String, Object> kafkaTemplate,
+                                KafkaProperties kafkaProperties*/) {
         this.storeName = storeName;
-        this.kafkaTemplate = kafkaTemplate;
-        this.kafkaProperties = kafkaProperties;
+        //this.kafkaTemplate = kafkaTemplate;
+        //this.kafkaProperties = kafkaProperties;
     }
 
     @Override
@@ -46,7 +47,7 @@ public class ReservationProcessor implements ValueTransformerWithKey<String, Ord
                     }
                     break;
                 case NEW:
-                    if(orderEvent.getPrice().compareTo(reservation.getAmountAvailable()) <= 1) {
+                    if(orderEvent.getPrice().compareTo(reservation.getAmountAvailable()) <= 0) {
                         reservation.setAmountAvailable(reservation.getAmountAvailable().subtract(orderEvent.getPrice()));
                         reservation.setAmountReserved(reservation.getAmountReserved().add(orderEvent.getPrice()));
                         orderEvent.setStatus(Status.ACCEPT);
@@ -55,6 +56,9 @@ public class ReservationProcessor implements ValueTransformerWithKey<String, Ord
                     }
 
                     //kafkaTemplate.send(kafkaProperties.getPaymentOrders(), orderEvent.getId(), orderEvent);
+            }
+            if(orderEvent.getPrice().compareTo(BigDecimal.valueOf(100000)) >= 0){
+                throw new RuntimeException("Price is too high");
             }
             addStateStore(key, reservation);
             return ExecutionResult.success(orderEvent);
@@ -66,7 +70,7 @@ public class ReservationProcessor implements ValueTransformerWithKey<String, Ord
     private PaymentReservationEvent getStateStore(String key) {
         var reservation = stateStore.get(key);
         if(reservation == null) {
-            reservation = new PaymentReservationEvent(BigDecimal.valueOf(50000));
+            reservation = new PaymentReservationEvent(PaymentUtils.CUSTOMER_AMOUNT_AVAILABLE);
         }
         return reservation;
     }

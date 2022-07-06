@@ -8,6 +8,8 @@ import org.apache.kafka.streams.kstream.ValueJoiner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.math.BigDecimal;
+
 public class OrderManager implements ValueJoiner<OrderFullEvent, OrderFullEvent, ExecutionResult<OrderFullEvent>> {
 
     private static final Logger logger = LoggerFactory.getLogger(OrderManager.class);
@@ -33,6 +35,11 @@ public class OrderManager implements ValueJoiner<OrderFullEvent, OrderFullEvent,
                 orderFullEvent.setStatus(Status.ROLLBACK);
                 orderFullEvent.setSource(source);
             }
+
+            if(payment.getPrice().compareTo(BigDecimal.valueOf(100000)) >= 0){
+                throw new RuntimeException("Price is too high");
+            }
+
             return ExecutionResult.success(orderFullEvent);
         } catch (Exception e) {
             logger.error("Error happen while joining payment and stock {}", e.getMessage());

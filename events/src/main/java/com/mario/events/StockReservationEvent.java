@@ -11,6 +11,11 @@ public class StockReservationEvent {
         this.itemsAvailable = itemsAvailable;
     }
 
+    public StockReservationEvent(int itemsAvailable, int itemsReserved) {
+        this.itemsAvailable = itemsAvailable;
+        this.itemsReserved = itemsReserved;
+    }
+
     public int getItemsAvailable() {
         return itemsAvailable;
     }

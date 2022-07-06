@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @ExtendWith({OutputCaptureExtension.class})
-public class TopologyTest {
+class TopologyTest {
 
     TopologyTestDriver testDriver;
     private TestInputTopic<String, OrderEvent> orderEventTopic;
@@ -77,36 +77,41 @@ public class TopologyTest {
         events.forEach(event -> orderEventTopic.pipeInput(event.getId(), event));
 
         //first event
-        var firstOutputEvent = orderFullEventTopic.readValue();
-        var firstInputEvent = findOrderEventById(events, firstOutputEvent.getId());
-        verifyInputOutputEvent(firstInputEvent, firstOutputEvent);
+        var firstOutputEvent = orderFullEventTopic.readKeyValue();
+        var firstInputEvent = findOrderEventById(events, firstOutputEvent.key);
+        verifyInputOutputEvent(firstInputEvent, firstOutputEvent.value);
 
-        var fullMiniFirstOutput = fullMiniCartTopic.readValue();
-        verifyInputOutputEvent(firstInputEvent, fullMiniFirstOutput);
+        var fullMiniFirstOutput = fullMiniCartTopic.readKeyValue();
+        assertEquals(firstInputEvent.getId(), fullMiniFirstOutput.key);
+        verifyInputOutputEvent(firstInputEvent, fullMiniFirstOutput.value);
 
 
         //second event
-        var secondOutputEvent = orderFullEventTopic.readValue();
-        var secondInputEvent = findOrderEventById(events, secondOutputEvent.getId());
-        verifyInputOutputEvent(secondInputEvent, secondOutputEvent);
+        var secondOutputEvent = orderFullEventTopic.readKeyValue();
+        var secondInputEvent = findOrderEventById(events, secondOutputEvent.key);
+        verifyInputOutputEvent(secondInputEvent, secondOutputEvent.value);
 
-        var valuableCustomerFirstOutput = valuableCustomerTopic.readValue();
-        verifyInputOutputEvent(secondInputEvent, valuableCustomerFirstOutput);
+        var valuableCustomerFirstOutput = valuableCustomerTopic.readKeyValue();
+        assertEquals(secondInputEvent.getId(), valuableCustomerFirstOutput.key);
+        verifyInputOutputEvent(secondInputEvent, valuableCustomerFirstOutput.value);
 
-        var fullMiniSecondOutput = fullMiniCartTopic.readValue();
-        verifyInputOutputEvent(secondInputEvent, fullMiniSecondOutput);
+        var fullMiniSecondOutput = fullMiniCartTopic.readKeyValue();
+        assertEquals(secondInputEvent.getId(), fullMiniSecondOutput.key);
+        verifyInputOutputEvent(secondInputEvent, fullMiniSecondOutput.value);
 
 
         //third event
-        var thirdOutputEvent = orderFullEventTopic.readValue();
-        var thirdInputEvent = findOrderEventById(events, thirdOutputEvent.getId());
-        verifyInputOutputEvent(thirdInputEvent, thirdOutputEvent);
+        var thirdOutputEvent = orderFullEventTopic.readKeyValue();
+        var thirdInputEvent = findOrderEventById(events, thirdOutputEvent.key);
+        verifyInputOutputEvent(thirdInputEvent, thirdOutputEvent.value);
 
-        var valuableCustomerSecond = valuableCustomerTopic.readValue();
-        verifyInputOutputEvent(thirdInputEvent, valuableCustomerSecond);
+        var valuableCustomerSecond = valuableCustomerTopic.readKeyValue();
+        assertEquals(thirdInputEvent.getId(), valuableCustomerSecond.key);
+        verifyInputOutputEvent(thirdInputEvent, valuableCustomerSecond.value);
 
-        var halfFullFirstOutput = halfFullCartTopic.readValue();
-        verifyInputOutputEvent(thirdInputEvent, halfFullFirstOutput);
+        var halfFullFirstOutput = halfFullCartTopic.readKeyValue();
+        assertEquals(thirdInputEvent.getId(), halfFullFirstOutput.key);
+        verifyInputOutputEvent(thirdInputEvent, halfFullFirstOutput.value);
     }
 
     @Test

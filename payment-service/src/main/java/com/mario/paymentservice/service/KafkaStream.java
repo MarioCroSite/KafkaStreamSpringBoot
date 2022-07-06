@@ -8,6 +8,7 @@ import com.mario.paymentservice.handlers.ReservationProcessor;
 import com.mario.pojo.ExecutionResult;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.KeyValueStore;
@@ -23,7 +24,7 @@ import org.springframework.kafka.support.serializer.JsonSerde;
 @Configuration
 public class KafkaStream {
     private static final Logger logger = LoggerFactory.getLogger(KafkaStream.class);
-    private static final String STORE_NAME = "CUSTOMER_KAFKA_STORE";
+    public static final String STORE_NAME = "CUSTOMER_KAFKA_STORE";
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     public KafkaStream(KafkaTemplate<String, Object> kafkaTemplate) {
@@ -31,8 +32,7 @@ public class KafkaStream {
     }
 
     @Bean
-    public KStream<String, OrderFullEvent> kStream(StreamsBuilder streamsBuilder,
-                                                   KafkaProperties kafkaProperties) {
+    public static Topology topology(StreamsBuilder streamsBuilder, KafkaProperties kafkaProperties) {
         streamsBuilder.addStateStore(getStoreBuilder());
 
         var stringSerde = Serdes.String();
@@ -49,7 +49,7 @@ public class KafkaStream {
 
         var aggregateCustomerAmount = incomingOrderFullEvent
                 .selectKey((k, v) -> v.getCustomerId())
-                .transformValues(() -> new ReservationProcessor(STORE_NAME, kafkaTemplate, kafkaProperties), STORE_NAME);
+                .transformValues(() -> new ReservationProcessor(STORE_NAME), STORE_NAME);
 
 //                .groupByKey(Grouped.with(stringSerde, orderFullEventSerde))
 //                .aggregate(
@@ -77,16 +77,18 @@ public class KafkaStream {
 
         branchAggregateCustomerAmount
                 .get("branch-error")
-                .peek((key, value) -> logger.info("[PAYMENT-SERVICE ERROR] Key="+ key +", Value="+ value));
+                .mapValues(ExecutionResult::getErrorMessage)
+                .peek((key, value) -> logger.info("[PAYMENT-SERVICE ERROR] Key="+ key +", Value="+ value))
+                .to("error-topic");
 
-        return incomingOrderFullEvent;
+        return streamsBuilder.build();
     }
 
-    private StoreBuilder<KeyValueStore<String, PaymentReservationEvent>> getStoreBuilder() {
+    private static StoreBuilder<KeyValueStore<String, PaymentReservationEvent>> getStoreBuilder() {
         return Stores.keyValueStoreBuilder(storeSupplier(), Serdes.String(), new JsonSerde<>(PaymentReservationEvent.class));
     }
 
-    public KeyValueBytesStoreSupplier storeSupplier() {
+    public static KeyValueBytesStoreSupplier storeSupplier() {
         return Stores.inMemoryKeyValueStore(STORE_NAME);
     }
 

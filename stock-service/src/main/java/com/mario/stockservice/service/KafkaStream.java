@@ -8,6 +8,7 @@ import com.mario.stockservice.config.KafkaProperties;
 import com.mario.stockservice.handlers.ReservationProcessor;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.KeyValueStore;
@@ -23,7 +24,7 @@ import org.springframework.kafka.support.serializer.JsonSerde;
 @Configuration
 public class KafkaStream {
     private static final Logger logger = LoggerFactory.getLogger(KafkaStream.class);
-    private static final String STORE_NAME = "MARKET_KAFKA_STORE";
+    public static final String STORE_NAME = "MARKET_KAFKA_STORE";
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     public KafkaStream(KafkaTemplate<String, Object> kafkaTemplate) {
@@ -31,8 +32,7 @@ public class KafkaStream {
     }
 
     @Bean
-    public KStream<String, OrderFullEvent> kStream(StreamsBuilder streamsBuilder,
-                                                   KafkaProperties kafkaProperties) {
+    public static Topology topology(StreamsBuilder streamsBuilder, KafkaProperties kafkaProperties) {
         streamsBuilder.addStateStore(getStoreBuilder());
 
         var stringSerde = Serdes.String();
@@ -48,7 +48,7 @@ public class KafkaStream {
 
         var aggregateMarketItems = incomingOrderFullEvent
                .selectKey((k, v) -> v.getMarketId())
-               .transformValues(() -> new ReservationProcessor(STORE_NAME, kafkaTemplate, kafkaProperties), STORE_NAME);
+               .transformValues(() -> new ReservationProcessor(STORE_NAME), STORE_NAME);
 
 //               .groupByKey(Grouped.with(stringSerde, orderFullEventSerde))
 //               .aggregate(
@@ -73,20 +73,22 @@ public class KafkaStream {
                 .filter((key, value) -> value.getStatus().equals(Status.ACCEPT) || value.getStatus().equals(Status.REJECT))
                 .selectKey((k, v) -> v.getId())
                 .peek((key, value) -> logger.info("[STOCK-SERVICE FILTERED NEW] Key="+ key +", Value="+ value))
-                .to((key, value, context) -> kafkaProperties.getStockOrders(), Produced.with(stringSerde, orderFullEventSerde));
+                .to(kafkaProperties.getStockOrders(), Produced.with(stringSerde, orderFullEventSerde));
 
         branchAggregateMarketItems
                 .get("branch-error")
-                .peek((key, value) -> logger.info("[STOCK-SERVICE ERROR] Key="+ key +", Value="+ value));
+                .mapValues(ExecutionResult::getErrorMessage)
+                .peek((key, value) -> logger.info("[STOCK-SERVICE ERROR] Key="+ key +", Value="+ value))
+                .to("error-topic");
 
-        return incomingOrderFullEvent;
+        return streamsBuilder.build();
     }
 
-    private StoreBuilder<KeyValueStore<String, StockReservationEvent>> getStoreBuilder() {
+    private static StoreBuilder<KeyValueStore<String, StockReservationEvent>> getStoreBuilder() {
         return Stores.keyValueStoreBuilder(storeSupplier(), Serdes.String(), new JsonSerde<>(StockReservationEvent.class));
     }
 
-    public KeyValueBytesStoreSupplier storeSupplier() {
+    public static KeyValueBytesStoreSupplier storeSupplier() {
         return Stores.inMemoryKeyValueStore(STORE_NAME);
     }
 
