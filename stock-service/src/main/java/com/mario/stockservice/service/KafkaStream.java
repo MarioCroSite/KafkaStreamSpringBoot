@@ -37,6 +37,7 @@ public class KafkaStream {
 
         var stringSerde = Serdes.String();
         var orderFullEventSerde = new JsonSerde<>(OrderFullEvent.class);
+        var errorSerde = new JsonSerde<>(Error.class);
         //var reservationEventSerde = new JsonSerde<>(StockReservationEvent.class);
 
         var incomingOrderFullEvent = streamsBuilder
@@ -77,9 +78,9 @@ public class KafkaStream {
 
         branchAggregateMarketItems
                 .get("branch-error")
-                .mapValues(ExecutionResult::getErrorMessage)
+                .mapValues(ExecutionResult::getError)
                 .peek((key, value) -> logger.info("[STOCK-SERVICE ERROR] Key="+ key +", Value="+ value))
-                .to("error-topic");
+                .to("error-topic", Produced.with(stringSerde, errorSerde));
 
         return streamsBuilder.build();
     }

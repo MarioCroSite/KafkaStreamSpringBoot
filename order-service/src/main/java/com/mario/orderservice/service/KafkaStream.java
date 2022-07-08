@@ -50,7 +50,7 @@ public class KafkaStream {
 
         joinBranch
                 .get("branch-error")
-                .mapValues(ExecutionResult::getErrorMessage)
+                .mapValues(ExecutionResult::getError)
                 .peek((key, value) -> logger.info("[JOIN BRANCH ERROR] Key="+ key +", Value="+ value))
                 .to("error-topic");
 

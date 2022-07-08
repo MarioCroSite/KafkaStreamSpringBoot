@@ -1,0 +1,12 @@
+com:
+  mario:
+    kafka:
+      stock-orders: "stock-orders"
+      market-orders-store: "market-orders-store"
+      order-full-topic: "orders-full"
+      bootstrap-servers:
+        - localhost:9092
+      security-protocol: "PLAINTEXT"
+      application-id: "stock"
+      consumer-group-id: "transformer"
+      trusted-packages: "*"

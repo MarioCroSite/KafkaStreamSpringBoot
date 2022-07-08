@@ -1,0 +1,12 @@
+com:
+  mario:
+    kafka:
+      payment-orders: "payment-orders"
+      customer-orders-store: "customer-orders-store"
+      order-full-topic: "orders-full"
+      bootstrap-servers:
+        - localhost:9092
+      security-protocol: "PLAINTEXT"
+      application-id: "payment"
+      consumer-group-id: "transformer"
+      trusted-packages: "*"

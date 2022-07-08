@@ -1,6 +1,5 @@
 package com.mario.transformator.config;
 
-import com.mario.transformator.config.KafkaProperties;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;

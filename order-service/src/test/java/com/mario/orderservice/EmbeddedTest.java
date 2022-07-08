@@ -2,121 +2,70 @@ package com.mario.orderservice;
 
 import com.mario.events.OrderFullEvent;
 import com.mario.events.Status;
-import com.mario.orderservice.config.KafkaProperties;
-import com.mario.orderservice.service.KafkaStream;
-import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.*;
-import org.apache.kafka.streams.errors.LogAndContinueExceptionHandler;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.awaitility.core.ConditionTimeoutException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
-import org.springframework.kafka.support.serializer.JsonDeserializer;
-import org.springframework.kafka.support.serializer.JsonSerde;
 
 import java.math.BigDecimal;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith({OutputCaptureExtension.class})
-class TopologyTest extends TestBase {
+class EmbeddedTest extends TestBase {
 
-    TopologyTestDriver testDriver;
-    private TestInputTopic<String, OrderFullEvent> paymentOrdersEventTopic;
-    private TestInputTopic<String, String> paymentOrdersEventStringTopic;
-    private TestInputTopic<String, OrderFullEvent> stockOrdersEventTopic;
-    private TestInputTopic<String, String> stockOrdersEventStringTopic;
-    private TestOutputTopic<String, OrderFullEvent> orderFullEventTopic;
-    private TestOutputTopic<String, String> errorTopic;
-
-    @Autowired
-    KafkaProperties kafkaProperties;
-
-    @BeforeEach
-    void setup() {
-        Properties props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "test");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummy:1234");
-        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
-        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, JsonSerde.class);
-        props.put(StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG, LogAndContinueExceptionHandler.class);
-        props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
-        StreamsBuilder streamsBuilder = new StreamsBuilder();
-
-        testDriver = new TopologyTestDriver(KafkaStream.topology(streamsBuilder, kafkaProperties), props);
-
-        var stringSerde = Serdes.String();
-        var orderFullEventSerde = new JsonSerde<>(OrderFullEvent.class);
-
-        paymentOrdersEventTopic = testDriver.createInputTopic(kafkaProperties.getPaymentOrders(), stringSerde.serializer(), orderFullEventSerde.serializer());
-        paymentOrdersEventStringTopic = testDriver.createInputTopic(kafkaProperties.getPaymentOrders(), stringSerde.serializer(), stringSerde.serializer());
-        stockOrdersEventTopic = testDriver.createInputTopic(kafkaProperties.getStockOrders(), stringSerde.serializer(), orderFullEventSerde.serializer());
-        stockOrdersEventStringTopic = testDriver.createInputTopic(kafkaProperties.getStockOrders(), stringSerde.serializer(), stringSerde.serializer());
-        orderFullEventTopic = testDriver.createOutputTopic(kafkaProperties.getOrderFullTopic(), stringSerde.deserializer(), orderFullEventSerde.deserializer());
-        errorTopic = testDriver.createOutputTopic("error-topic", stringSerde.deserializer(), stringSerde.deserializer());
-    }
-
-    @AfterEach
-    void tearDown() {
-        testDriver.close();
-    }
 
     @Test
     void processSuccessJoinStreamsTopology() {
         orderFullAcceptEvents().forEach(event -> {
-            paymentOrdersEventTopic.pipeInput(event.getId(), event);
-            stockOrdersEventTopic.pipeInput(event.getId(), event);
+            kafkaSend(kafkaProperties.getPaymentOrders(), event.getId(), event);
+            kafkaSend(kafkaProperties.getStockOrders(), event.getId(), event);
+            await().until(() -> orderFullEventTopic.size() == 1);
 
-            var outputEvent = orderFullEventTopic.readKeyValue();
-            verifyInputOutputEvent(event, outputEvent.value);
-            assertEquals(Status.CONFIRMED, outputEvent.value.getStatus());
+            var outputEvent = orderFullEventTopic.get(0);
+            verifyInputOutputEvent(event, outputEvent.value());
+            assertEquals(Status.CONFIRMED, outputEvent.value().getStatus());
+            orderFullEventTopic.clear();
         });
     }
 
     @Test
-    void processWindowingTopology() {
-        orderFullAcceptEvents().forEach(event -> {
-            var timestampNow = Instant.now().toEpochMilli();
-            var timestampNowPlus15Seconds = Instant.now().plus(15, ChronoUnit.SECONDS).toEpochMilli();
+    void processWindowingTopology() throws InterruptedException {
+        var acceptEvent = orderFullAcceptEvents().get(0);
 
-            paymentOrdersEventTopic.pipeInput(event.getId(), event, timestampNow);
-            stockOrdersEventTopic.pipeInput(event.getId(), event, timestampNowPlus15Seconds);
-
-            Throwable exception = assertThrows(NoSuchElementException.class, () -> orderFullEventTopic.readKeyValue());
-            assertThat(exception.getMessage()).contains("Uninitialized topic: orders-full");
-        });
+        kafkaSend(kafkaProperties.getPaymentOrders(), acceptEvent.getId(), acceptEvent);
+        TimeUnit.SECONDS.sleep(15);
+        kafkaSend(kafkaProperties.getStockOrders(), acceptEvent.getId(), acceptEvent);
+        Throwable exception = assertThrows(ConditionTimeoutException.class, () -> await().until(() -> orderFullEventTopic.size() == 1));
+        assertThat(exception.getMessage()).contains("was not fulfilled within 10 seconds.");
     }
 
     @Test
     void processKeyisNotSameForBothStreamTopology() {
         orderFullAcceptEvents().forEach(event -> {
-            paymentOrdersEventTopic.pipeInput(event.getId(), event);
-            stockOrdersEventTopic.pipeInput(UUID.randomUUID().toString(), event);
-
-            Throwable exception = assertThrows(NoSuchElementException.class, () -> orderFullEventTopic.readKeyValue());
-            assertThat(exception.getMessage()).contains("Uninitialized topic: orders-full");
+            kafkaSend(kafkaProperties.getPaymentOrders(), event.getId(), event);
+            kafkaSend(kafkaProperties.getStockOrders(), UUID.randomUUID().toString(), event);
+            Throwable exception = assertThrows(ConditionTimeoutException.class, () -> await().until(() -> orderFullEventTopic.size() == 1));
+            assertThat(exception.getMessage()).contains("was not fulfilled within 10 seconds.");
+            orderFullEventTopic.clear();
         });
     }
 
     @Test
     void processDeserializationError(CapturedOutput output) {
         orderFullAcceptEvents().forEach(event -> {
-            paymentOrdersEventStringTopic.pipeInput(UUID.randomUUID().toString(), "test");
-            assertThat(output.getOut()).contains("Exception caught during Deserialization");
+            kafkaStringTemplate.send(kafkaProperties.getPaymentOrders(), UUID.randomUUID().toString(), "test");
+            await().until(() -> output.getOut().contains("Exception caught during Deserialization"));
 
-            stockOrdersEventStringTopic.pipeInput(UUID.randomUUID().toString(), "test");
-            assertThat(output.getOut()).contains("Exception caught during Deserialization");
+            kafkaStringTemplate.send(kafkaProperties.getStockOrders(), UUID.randomUUID().toString(), "test");
+            await().until(() -> output.getOut().contains("Exception caught during Deserialization"));
         });
     }
 
@@ -126,12 +75,13 @@ class TopologyTest extends TestBase {
         var orderEventError = orderFullEventWithPrice(id, BigDecimal.valueOf(100000));
         var stockEvent = orderFullEventWithPrice(id, BigDecimal.valueOf(30000));
 
-        paymentOrdersEventTopic.pipeInput(orderEventError.getId(), orderEventError);
-        stockOrdersEventTopic.pipeInput(stockEvent.getId(), stockEvent);
+        kafkaSend(kafkaProperties.getPaymentOrders(), orderEventError.getId(), orderEventError);
+        kafkaSend(kafkaProperties.getStockOrders(), stockEvent.getId(), stockEvent);
+        await().until(() -> errorEventTopic.size() == 1);
 
-        var errorResponseTopic = errorTopic.readKeyValue();
-        assertEquals(errorResponseTopic.key, orderEventError.getId());
-        assertThat(errorResponseTopic.value).contains("Price is too high");
+        var errorResponseTopic = errorEventTopic.get(0);
+        assertEquals(errorResponseTopic.key(), orderEventError.getId());
+        assertThat(errorResponseTopic.value().toString()).contains("Price is too high");
     }
 
     private void verifyInputOutputEvent(OrderFullEvent input, OrderFullEvent output) {
