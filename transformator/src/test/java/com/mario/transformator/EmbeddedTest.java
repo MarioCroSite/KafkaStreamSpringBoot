@@ -19,7 +19,7 @@ class EmbeddedTest extends TestBase {
 
 
     @Test
-    void processSuccessTopology() throws Exception {
+    void processSuccessTopology() {
         var firstInputEvent = orderEvents().get(0);
         var secondInputEvent = orderEvents().get(1);
         var thirdInputEvent = orderEvents().get(2);
@@ -75,7 +75,7 @@ class EmbeddedTest extends TestBase {
     }
 
     @Test
-    void processDeserializationError(CapturedOutput output) throws Exception {
+    void processDeserializationError(CapturedOutput output) {
         kafkaSend(kafkaProperties.getOrderTopic(), UUID.randomUUID().toString(), "test");
         await().until(() -> output.getOut().contains("Exception caught during Deserialization"));
 
@@ -86,7 +86,7 @@ class EmbeddedTest extends TestBase {
     }
 
     @Test
-    void processErrorTopic() throws Exception{
+    void processErrorTopic() {
         var orderEventError = orderEventError();
         kafkaSend(kafkaProperties.getOrderTopic(), orderEventError.getId(), orderEventError);
         await().until(() -> errorEventTopic.size() == 1);

@@ -82,8 +82,12 @@ public class TestBase {
     }
 
 
-    protected void kafkaSend(String topic, String key, Object value) throws JsonProcessingException {
-        kafkaTemplate.send(topic, key, objectMapper.writeValueAsString(value));
+    protected void kafkaSend(String topic, String key, Object value) {
+        try {
+            kafkaTemplate.send(topic, key, objectMapper.writeValueAsString(value));
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
     }
 
 }
