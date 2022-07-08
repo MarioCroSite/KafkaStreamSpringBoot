@@ -20,9 +20,9 @@ class EmbeddedTest extends TestBase {
 
     @Test
     void processSuccessTopology() {
-        var firstInputEvent = orderEvents().get(0);
-        var secondInputEvent = orderEvents().get(1);
-        var thirdInputEvent = orderEvents().get(2);
+        var firstInputEvent = TestData.orderEvents().get(0);
+        var secondInputEvent = TestData.orderEvents().get(1);
+        var thirdInputEvent = TestData.orderEvents().get(2);
 
 
         //first event
@@ -79,7 +79,7 @@ class EmbeddedTest extends TestBase {
         kafkaSend(kafkaProperties.getOrderTopic(), UUID.randomUUID().toString(), "test");
         await().until(() -> output.getOut().contains("Exception caught during Deserialization"));
 
-        var firstInputEvent = orderEvents().get(0);
+        var firstInputEvent = TestData.orderEvents().get(0);
         kafkaSend(kafkaProperties.getOrderTopic(), firstInputEvent.getId(), firstInputEvent);
         await().until(() -> orderFullEventTopic.size() == 1);
         verifyInputOutputEvent(firstInputEvent, orderFullEventTopic.get(0).value());
@@ -87,7 +87,7 @@ class EmbeddedTest extends TestBase {
 
     @Test
     void processErrorTopic() {
-        var orderEventError = orderEventError();
+        var orderEventError = TestData.orderEventError();
         kafkaSend(kafkaProperties.getOrderTopic(), orderEventError.getId(), orderEventError);
         await().until(() -> errorEventTopic.size() == 1);
 
@@ -113,107 +113,6 @@ class EmbeddedTest extends TestBase {
 
     private BigDecimal calculatePrice(List<Product> products) {
         return products.stream().map(Product::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    private List<OrderEvent> orderEvents() {
-        String marketId = UUID.randomUUID().toString();
-        String customerId = UUID.randomUUID().toString();
-
-        return List.of(
-                OrderEventCreator.createOrderEvent(
-                        UUID.randomUUID().toString(),
-                        marketId,
-                        customerId,
-                        List.of(
-                                OrderEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(2000),
-                                        "Product 1"
-                                )
-                        )
-                ),
-
-                OrderEventCreator.createOrderEvent(
-                        UUID.randomUUID().toString(),
-                        marketId,
-                        customerId,
-                        List.of(
-                                OrderEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(15000),
-                                        "Product 1"
-                                ),
-                                OrderEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(5000),
-                                        "Product 3"
-                                )
-                        )
-                ),
-
-                OrderEventCreator.createOrderEvent(
-                        UUID.randomUUID().toString(),
-                        marketId,
-                        customerId,
-                        List.of(
-                                OrderEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(2000),
-                                        "Product 2"
-                                ),
-                                OrderEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(2000),
-                                        "Product 3"
-                                ),
-                                OrderEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(2000),
-                                        "Product 4"
-                                ),
-                                OrderEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(2000),
-                                        "Product 5"
-                                ),
-                                OrderEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(2000),
-                                        "Product 6"
-                                )
-                        )
-                )
-        );
-    }
-
-    private OrderEvent orderEventError() {
-        return OrderEventCreator.createOrderEvent(
-                UUID.randomUUID().toString(),
-                UUID.randomUUID().toString(),
-                UUID.randomUUID().toString(),
-                List.of(
-                        OrderEventCreator.createProduct(
-                                UUID.randomUUID().toString(),
-                                BigDecimal.valueOf(2000),
-                                "Product 2"
-                        ),
-                        OrderEventCreator.createProduct(
-                                UUID.randomUUID().toString(),
-                                BigDecimal.valueOf(2000),
-                                "Product 3"
-                        ),
-                        OrderEventCreator.createProduct(
-                                UUID.randomUUID().toString(),
-                                BigDecimal.valueOf(2000),
-                                "Product 4"
-                        ),
-                        OrderEventCreator.createProduct(
-                                UUID.randomUUID().toString(),
-                                BigDecimal.valueOf(2000),
-                                "Product 5"
-                        )
-                )
-        );
     }
 
 }

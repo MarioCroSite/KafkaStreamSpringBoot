@@ -9,7 +9,6 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -21,10 +20,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @ExtendWith({OutputCaptureExtension.class})
 class EmbeddedTest extends TestBase {
 
-
     @Test
     void processSuccessJoinStreamsTopology() {
-        orderFullAcceptEvents().forEach(event -> {
+        TestData.orderFullAcceptEvents().forEach(event -> {
             kafkaSend(kafkaProperties.getPaymentOrders(), event.getId(), event);
             kafkaSend(kafkaProperties.getStockOrders(), event.getId(), event);
             await().until(() -> orderFullEventTopic.size() == 1);
@@ -38,7 +36,7 @@ class EmbeddedTest extends TestBase {
 
     @Test
     void processWindowingTopology() throws InterruptedException {
-        var acceptEvent = orderFullAcceptEvents().get(0);
+        var acceptEvent = TestData.orderFullAcceptEvents().get(0);
 
         kafkaSend(kafkaProperties.getPaymentOrders(), acceptEvent.getId(), acceptEvent);
         TimeUnit.SECONDS.sleep(15);
@@ -48,8 +46,8 @@ class EmbeddedTest extends TestBase {
     }
 
     @Test
-    void processKeyisNotSameForBothStreamTopology() {
-        orderFullAcceptEvents().forEach(event -> {
+    void processKeyIsNotSameForBothStreamTopology() {
+        TestData.orderFullAcceptEvents().forEach(event -> {
             kafkaSend(kafkaProperties.getPaymentOrders(), event.getId(), event);
             kafkaSend(kafkaProperties.getStockOrders(), UUID.randomUUID().toString(), event);
             Throwable exception = assertThrows(ConditionTimeoutException.class, () -> await().until(() -> orderFullEventTopic.size() == 1));
@@ -60,7 +58,7 @@ class EmbeddedTest extends TestBase {
 
     @Test
     void processDeserializationError(CapturedOutput output) {
-        orderFullAcceptEvents().forEach(event -> {
+        TestData.orderFullAcceptEvents().forEach(event -> {
             kafkaStringTemplate.send(kafkaProperties.getPaymentOrders(), UUID.randomUUID().toString(), "test");
             await().until(() -> output.getOut().contains("Exception caught during Deserialization"));
 
@@ -72,8 +70,8 @@ class EmbeddedTest extends TestBase {
     @Test
     void processErrorTopic() {
         String id = UUID.randomUUID().toString();
-        var orderEventError = orderFullEventWithPrice(id, BigDecimal.valueOf(100000));
-        var stockEvent = orderFullEventWithPrice(id, BigDecimal.valueOf(30000));
+        var orderEventError = TestData.orderFullEventWithPrice(id, BigDecimal.valueOf(100000));
+        var stockEvent = TestData.orderFullEventWithPrice(id, BigDecimal.valueOf(30000));
 
         kafkaSend(kafkaProperties.getPaymentOrders(), orderEventError.getId(), orderEventError);
         kafkaSend(kafkaProperties.getStockOrders(), stockEvent.getId(), stockEvent);
@@ -90,95 +88,6 @@ class EmbeddedTest extends TestBase {
         assertEquals(input.getCustomerId(), output.getCustomerId());
         assertEquals(input.getProductCount(), output.getProductCount());
         assertEquals(input.getPrice(), output.getPrice());
-    }
-
-    private List<OrderFullEvent> orderFullAcceptEvents() {
-        String customerId = UUID.randomUUID().toString();
-        String marketId = UUID.randomUUID().toString();
-
-        return List.of(
-                OrderFullEventCreator.createOrderFullEvent(
-                        UUID.randomUUID().toString(),
-                        customerId,
-                        marketId,
-                        5,
-                        BigDecimal.valueOf(30000),
-                        List.of(
-                                OrderFullEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(6000),
-                                        "Product 2"
-                                ),
-                                OrderFullEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(6000),
-                                        "Product 3"
-                                ),
-                                OrderFullEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(6000),
-                                        "Product 4"
-                                ),
-                                OrderFullEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(6000),
-                                        "Product 5"
-                                ),
-                                OrderFullEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(6000),
-                                        "Product 6"
-                                )
-                        ),
-                        Status.ACCEPT
-                ),
-                OrderFullEventCreator.createOrderFullEvent(
-                        UUID.randomUUID().toString(),
-                        customerId,
-                        marketId,
-                        2,
-                        BigDecimal.valueOf(10000),
-                        List.of(
-                                OrderFullEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(5000),
-                                        "Product 2"
-                                ),
-                                OrderFullEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(5000),
-                                        "Product 3"
-                                )
-                        ),
-                        Status.ACCEPT
-                )
-        );
-    }
-
-    private OrderFullEvent orderFullEventWithPrice(String id, BigDecimal price) {
-        String customerId = UUID.randomUUID().toString();
-        String marketId = UUID.randomUUID().toString();
-
-        return OrderFullEventCreator.createOrderFullEvent(
-                id,
-                customerId,
-                marketId,
-                2,
-                price,
-                List.of(
-                        OrderFullEventCreator.createProduct(
-                                UUID.randomUUID().toString(),
-                                BigDecimal.valueOf(30000),
-                                "Product 2"
-                        ),
-                        OrderFullEventCreator.createProduct(
-                                UUID.randomUUID().toString(),
-                                BigDecimal.valueOf(30000),
-                                "Product 3"
-                        )
-                ),
-                Status.NEW
-        );
     }
 
 }

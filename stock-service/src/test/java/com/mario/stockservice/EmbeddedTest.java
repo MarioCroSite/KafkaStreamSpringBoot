@@ -14,8 +14,6 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.kafka.support.serializer.JsonSerde;
 
-import java.math.BigDecimal;
-import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -33,7 +31,7 @@ class EmbeddedTest extends TestBase {
         assertEquals(MarketUtils.MARKET_AVAILABLE_ITEMS, marketItemsBeforeEventIsSend.getItemsAvailable());
         assertEquals(0, marketItemsBeforeEventIsSend.getItemsReserved());
 
-        orderFullAcceptEvents(marketId).forEach(event -> checkStockStore(event, marketId));
+        TestData.orderFullAcceptEvents(marketId).forEach(event -> checkStockStore(event, marketId));
     }
 
     @Test
@@ -44,7 +42,7 @@ class EmbeddedTest extends TestBase {
         assertEquals(MarketUtils.MARKET_AVAILABLE_ITEMS, marketItemsBeforeEventIsSend.getItemsAvailable());
         assertEquals(0, marketItemsBeforeEventIsSend.getItemsReserved());
 
-        var rejectEvent = orderFullEventWithProductCount(marketId, 1500);
+        var rejectEvent = TestData.orderFullEventWithProductCount(marketId, 1500);
         kafkaSend(kafkaProperties.getOrderFullTopic(), rejectEvent.getId(), rejectEvent);
         await().until(() -> stockOrdersEventTopic.size() == 1);
 
@@ -62,7 +60,7 @@ class EmbeddedTest extends TestBase {
         kafkaSend(kafkaProperties.getOrderFullTopic(), UUID.randomUUID().toString(), "test");
         await().until(() -> output.getOut().contains("Exception caught during Deserialization"));
 
-        var rejectEvent = orderFullEventWithProductCount(UUID.randomUUID().toString(), 1500);
+        var rejectEvent = TestData.orderFullEventWithProductCount(UUID.randomUUID().toString(), 1500);
         kafkaSend(kafkaProperties.getOrderFullTopic(), rejectEvent.getId(), rejectEvent);
         await().until(() -> stockOrdersEventTopic.size() == 1);
 
@@ -73,7 +71,7 @@ class EmbeddedTest extends TestBase {
 
     @Test
     void processErrorTopic() {
-        var orderEventError = orderFullEventWithProductCount(UUID.randomUUID().toString(), 2500);
+        var orderEventError = TestData.orderFullEventWithProductCount(UUID.randomUUID().toString(), 2500);
         kafkaSend(kafkaProperties.getOrderFullTopic(), orderEventError.getId(), orderEventError);
         await().until(() -> errorEventTopic.size() == 1);
 
@@ -125,93 +123,6 @@ class EmbeddedTest extends TestBase {
         assertEquals(input.getCustomerId(), output.getCustomerId());
         assertEquals(input.getProductCount(), output.getProductCount());
         assertEquals(input.getPrice(), output.getPrice());
-    }
-
-    private List<OrderFullEvent> orderFullAcceptEvents(String marketId) {
-        String customerId = UUID.randomUUID().toString();
-
-        return List.of(
-                OrderFullEventCreator.createOrderFullEvent(
-                        UUID.randomUUID().toString(),
-                        customerId,
-                        marketId,
-                        5,
-                        BigDecimal.valueOf(30000),
-                        List.of(
-                                OrderFullEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(6000),
-                                        "Product 2"
-                                ),
-                                OrderFullEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(6000),
-                                        "Product 3"
-                                ),
-                                OrderFullEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(6000),
-                                        "Product 4"
-                                ),
-                                OrderFullEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(6000),
-                                        "Product 5"
-                                ),
-                                OrderFullEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(6000),
-                                        "Product 6"
-                                )
-                        ),
-                        Status.NEW
-                ),
-                OrderFullEventCreator.createOrderFullEvent(
-                        UUID.randomUUID().toString(),
-                        customerId,
-                        marketId,
-                        2,
-                        BigDecimal.valueOf(10000),
-                        List.of(
-                                OrderFullEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(5000),
-                                        "Product 2"
-                                ),
-                                OrderFullEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(5000),
-                                        "Product 3"
-                                )
-                        ),
-                        Status.NEW
-                )
-        );
-    }
-
-    private OrderFullEvent orderFullEventWithProductCount(String marketId, Integer productCount) {
-        String customerId = UUID.randomUUID().toString();
-
-        return OrderFullEventCreator.createOrderFullEvent(
-                UUID.randomUUID().toString(),
-                customerId,
-                marketId,
-                productCount,
-                BigDecimal.valueOf(60000),
-                List.of(
-                        OrderFullEventCreator.createProduct(
-                                UUID.randomUUID().toString(),
-                                BigDecimal.valueOf(30000),
-                                "Product 2"
-                        ),
-                        OrderFullEventCreator.createProduct(
-                                UUID.randomUUID().toString(),
-                                BigDecimal.valueOf(30000),
-                                "Product 3"
-                        )
-                ),
-                Status.NEW
-        );
     }
 
 }

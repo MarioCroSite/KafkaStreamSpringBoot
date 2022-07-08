@@ -8,7 +8,6 @@ import com.mario.paymentservice.service.KafkaStream;
 import com.mario.paymentservice.util.PaymentUtils;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.*;
-import org.apache.kafka.streams.errors.LogAndContinueExceptionHandler;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,8 +19,6 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.kafka.support.serializer.JsonSerde;
 
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.Properties;
 import java.util.UUID;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -30,7 +27,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @ExtendWith({OutputCaptureExtension.class})
 class TopologyTest extends TestBase {
 
-    TopologyTestDriver testDriver;
     private TestInputTopic<String, OrderFullEvent> orderFullEventTopic;
     private TestInputTopic<String, String> orderFullEventStringTopic;
     private TestOutputTopic<String, OrderFullEvent> paymentOrdersTopic;
@@ -42,16 +38,6 @@ class TopologyTest extends TestBase {
 
     @BeforeEach
     void setup() {
-        Properties props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "test");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummy:1234");
-        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
-        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
-        props.put(StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG, LogAndContinueExceptionHandler.class);
-        StreamsBuilder streamsBuilder = new StreamsBuilder();
-
-        testDriver = new TopologyTestDriver(KafkaStream.topology(streamsBuilder, kafkaProperties), props);
-
         var stringSerde = Serdes.String();
         var orderFullEventSerde = new JsonSerde<>(OrderFullEvent.class);
 
@@ -77,7 +63,7 @@ class TopologyTest extends TestBase {
         assertEquals(PaymentUtils.CUSTOMER_AMOUNT_AVAILABLE, customerAmountBeforeEventIsSend.getAmountAvailable());
         assertEquals(BigDecimal.ZERO, customerAmountBeforeEventIsSend.getAmountReserved());
 
-        orderFullAcceptEvents(customerId).forEach(event -> checkStockStore(event, customerId));
+        TestData.orderFullAcceptEvents(customerId).forEach(event -> checkStockStore(event, customerId));
     }
 
     @Test
@@ -90,7 +76,7 @@ class TopologyTest extends TestBase {
         assertEquals(PaymentUtils.CUSTOMER_AMOUNT_AVAILABLE, customerAmountBeforeEventIsSend.getAmountAvailable());
         assertEquals(BigDecimal.ZERO, customerAmountBeforeEventIsSend.getAmountReserved());
 
-        var rejectEvent = orderFullEventWithPrice(customerId, BigDecimal.valueOf(60000));
+        var rejectEvent = TestData.orderFullEventWithPrice(customerId, BigDecimal.valueOf(60000));
         orderFullEventTopic.pipeInput(rejectEvent.getId(), rejectEvent);
 
         var outputEvent = paymentOrdersTopic.readKeyValue();
@@ -108,7 +94,7 @@ class TopologyTest extends TestBase {
 
         assertThat(output.getOut()).contains("Exception caught during Deserialization");
 
-        var rejectEvent = orderFullEventWithPrice(UUID.randomUUID().toString(), BigDecimal.valueOf(60000));
+        var rejectEvent = TestData.orderFullEventWithPrice(UUID.randomUUID().toString(), BigDecimal.valueOf(60000));
         orderFullEventTopic.pipeInput(rejectEvent.getId(), rejectEvent);
 
         var outputEvent = paymentOrdersTopic.readKeyValue();
@@ -118,7 +104,7 @@ class TopologyTest extends TestBase {
 
     @Test
     void processErrorTopic() {
-        var orderEventError = orderFullEventWithPrice(UUID.randomUUID().toString(), BigDecimal.valueOf(100000));
+        var orderEventError = TestData.orderFullEventWithPrice(UUID.randomUUID().toString(), BigDecimal.valueOf(100000));
         orderFullEventTopic.pipeInput(orderEventError.getId(), orderEventError);
 
         var errorResponseTopic = errorTopic.readKeyValue();
@@ -158,93 +144,6 @@ class TopologyTest extends TestBase {
 
     private PaymentReservationEvent getStockStore(String key) {
         return stockStore.get(key);
-    }
-
-    private List<OrderFullEvent> orderFullAcceptEvents(String customerId) {
-        String marketId = UUID.randomUUID().toString();
-
-        return List.of(
-                OrderFullEventCreator.createOrderFullEvent(
-                        UUID.randomUUID().toString(),
-                        customerId,
-                        marketId,
-                        5,
-                        BigDecimal.valueOf(30000),
-                        List.of(
-                                OrderFullEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(6000),
-                                        "Product 2"
-                                ),
-                                OrderFullEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(6000),
-                                        "Product 3"
-                                ),
-                                OrderFullEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(6000),
-                                        "Product 4"
-                                ),
-                                OrderFullEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(6000),
-                                        "Product 5"
-                                ),
-                                OrderFullEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(6000),
-                                        "Product 6"
-                                )
-                        ),
-                        Status.NEW
-                ),
-                OrderFullEventCreator.createOrderFullEvent(
-                        UUID.randomUUID().toString(),
-                        customerId,
-                        marketId,
-                        2,
-                        BigDecimal.valueOf(10000),
-                        List.of(
-                                OrderFullEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(5000),
-                                        "Product 2"
-                                ),
-                                OrderFullEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(5000),
-                                        "Product 3"
-                                )
-                        ),
-                        Status.NEW
-                )
-        );
-    }
-
-    private OrderFullEvent orderFullEventWithPrice(String customerId, BigDecimal price) {
-        String marketId = UUID.randomUUID().toString();
-
-        return OrderFullEventCreator.createOrderFullEvent(
-                UUID.randomUUID().toString(),
-                customerId,
-                marketId,
-                2,
-                price,
-                List.of(
-                        OrderFullEventCreator.createProduct(
-                                UUID.randomUUID().toString(),
-                                BigDecimal.valueOf(30000),
-                                "Product 2"
-                        ),
-                        OrderFullEventCreator.createProduct(
-                                UUID.randomUUID().toString(),
-                                BigDecimal.valueOf(30000),
-                                "Product 3"
-                        )
-                ),
-                Status.NEW
-        );
     }
 
 }

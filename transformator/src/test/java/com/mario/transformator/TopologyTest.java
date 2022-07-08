@@ -1,10 +1,8 @@
 package com.mario.transformator;
 
 import com.mario.events.*;
-import com.mario.transformator.service.KafkaStream;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.*;
-import org.apache.kafka.streams.errors.LogAndContinueExceptionHandler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,7 +13,6 @@ import org.springframework.kafka.support.serializer.JsonSerde;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Properties;
 import java.util.UUID;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -24,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.*;
 @ExtendWith({OutputCaptureExtension.class})
 class TopologyTest extends TestBase {
 
-    TopologyTestDriver testDriver;
     private TestInputTopic<String, OrderEvent> orderEventTopic;
     private TestInputTopic<String, String> orderEventStringTopic;
     private TestOutputTopic<String, OrderFullEvent> orderFullEventTopic;
@@ -35,16 +31,6 @@ class TopologyTest extends TestBase {
 
     @BeforeEach
     void setup() {
-        Properties props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "test");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummy:1234");
-        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
-        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
-        props.put(StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG, LogAndContinueExceptionHandler.class);
-        StreamsBuilder streamsBuilder = new StreamsBuilder();
-
-        testDriver = new TopologyTestDriver(KafkaStream.topology(streamsBuilder, kafkaProperties), props);
-
         var stringSerde = Serdes.String();
         var orderEventSerde = new JsonSerde<>(OrderEvent.class);
         var orderFullEventSerde = new JsonSerde<>(OrderFullEvent.class);
@@ -67,7 +53,7 @@ class TopologyTest extends TestBase {
 
     @Test
     void processSuccessTopology() {
-        var events = orderEvents();
+        var events = TestData.orderEvents();
         events.forEach(event -> orderEventTopic.pipeInput(event.getId(), event));
 
         //first event
@@ -114,7 +100,7 @@ class TopologyTest extends TestBase {
 
         assertThat(output.getOut()).contains("Exception caught during Deserialization");
 
-        var events = orderEvents();
+        var events = TestData.orderEvents();
         events.forEach(event -> orderEventTopic.pipeInput(event.getId(), event));
 
         var firstOutputEvent = orderFullEventTopic.readValue();
@@ -124,7 +110,7 @@ class TopologyTest extends TestBase {
 
     @Test
     void processErrorTopic() {
-        var orderEventError = orderEventError();
+        var orderEventError = TestData.orderEventError();
         orderEventTopic.pipeInput(orderEventError.getId(), orderEventError);
 
         var errorResponseTopic = errorTopic.readKeyValue();
@@ -156,107 +142,6 @@ class TopologyTest extends TestBase {
 
     private BigDecimal calculatePrice(List<Product> products) {
         return products.stream().map(Product::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    private List<OrderEvent> orderEvents() {
-        String marketId = UUID.randomUUID().toString();
-        String customerId = UUID.randomUUID().toString();
-
-        return List.of(
-                OrderEventCreator.createOrderEvent(
-                        UUID.randomUUID().toString(),
-                        marketId,
-                        customerId,
-                        List.of(
-                                OrderEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(2000),
-                                        "Product 1"
-                                )
-                        )
-                ),
-
-                OrderEventCreator.createOrderEvent(
-                        UUID.randomUUID().toString(),
-                        marketId,
-                        customerId,
-                        List.of(
-                                OrderEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(15000),
-                                        "Product 1"
-                                ),
-                                OrderEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(5000),
-                                        "Product 3"
-                                )
-                        )
-                ),
-
-                OrderEventCreator.createOrderEvent(
-                        UUID.randomUUID().toString(),
-                        marketId,
-                        customerId,
-                        List.of(
-                                OrderEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(2000),
-                                        "Product 2"
-                                ),
-                                OrderEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(2000),
-                                        "Product 3"
-                                ),
-                                OrderEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(2000),
-                                        "Product 4"
-                                ),
-                                OrderEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(2000),
-                                        "Product 5"
-                                ),
-                                OrderEventCreator.createProduct(
-                                        UUID.randomUUID().toString(),
-                                        BigDecimal.valueOf(2000),
-                                        "Product 6"
-                                )
-                        )
-                )
-        );
-    }
-
-    private OrderEvent orderEventError() {
-        return OrderEventCreator.createOrderEvent(
-                UUID.randomUUID().toString(),
-                UUID.randomUUID().toString(),
-                UUID.randomUUID().toString(),
-                List.of(
-                        OrderEventCreator.createProduct(
-                                UUID.randomUUID().toString(),
-                                BigDecimal.valueOf(2000),
-                                "Product 2"
-                        ),
-                        OrderEventCreator.createProduct(
-                                UUID.randomUUID().toString(),
-                                BigDecimal.valueOf(2000),
-                                "Product 3"
-                        ),
-                        OrderEventCreator.createProduct(
-                                UUID.randomUUID().toString(),
-                                BigDecimal.valueOf(2000),
-                                "Product 4"
-                        ),
-                        OrderEventCreator.createProduct(
-                                UUID.randomUUID().toString(),
-                                BigDecimal.valueOf(2000),
-                                "Product 5"
-                        )
-                )
-        );
     }
 
 }

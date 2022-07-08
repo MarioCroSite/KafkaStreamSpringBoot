@@ -5,7 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mario.events.OrderFullEvent;
 import com.mario.events.OrderPartialEvent;
 import com.mario.transformator.config.KafkaProperties;
+import com.mario.transformator.service.KafkaStream;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.streams.*;
+import org.apache.kafka.streams.errors.LogAndContinueExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,6 +19,7 @@ import org.springframework.kafka.test.context.EmbeddedKafka;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 @SpringBootTest
 @EmbeddedKafka(
@@ -33,19 +38,32 @@ public class TestBase {
     @Autowired
     ObjectMapper objectMapper;
 
-    static List<ConsumerRecord<String, OrderFullEvent>> orderFullEventTopic = new ArrayList<>();
-    static List<ConsumerRecord<String, OrderFullEvent>> valuableCustomerEventTopic = new ArrayList<>();
-    static List<ConsumerRecord<String, OrderFullEvent>> halfFullCartEventTopic = new ArrayList<>();
-    static List<ConsumerRecord<String, OrderPartialEvent>> fullMiniCartEventTopic = new ArrayList<>();
-    static List<ConsumerRecord<String, Error>> errorEventTopic = new ArrayList<>();
+    TopologyTestDriver testDriver;
+    public static List<ConsumerRecord<String, OrderFullEvent>> orderFullEventTopic = new ArrayList<>();
+    public static List<ConsumerRecord<String, OrderFullEvent>> valuableCustomerEventTopic = new ArrayList<>();
+    public static List<ConsumerRecord<String, OrderFullEvent>> halfFullCartEventTopic = new ArrayList<>();
+    public static List<ConsumerRecord<String, OrderPartialEvent>> fullMiniCartEventTopic = new ArrayList<>();
+    public static List<ConsumerRecord<String, Error>> errorEventTopic = new ArrayList<>();
 
     @BeforeEach
-    public void clear() {
+    public void init() {
         orderFullEventTopic.clear();
         valuableCustomerEventTopic.clear();
         halfFullCartEventTopic.clear();
         fullMiniCartEventTopic.clear();
         errorEventTopic.clear();
+
+        testDriver = new TopologyTestDriver(KafkaStream.topology(new StreamsBuilder(), kafkaProperties), dummyProperties());
+    }
+
+    private Properties dummyProperties() {
+        Properties props = new Properties();
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "test");
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummy:1234");
+        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+        props.put(StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG, LogAndContinueExceptionHandler.class);
+        return props;
     }
 
     @SuppressWarnings("unchecked")

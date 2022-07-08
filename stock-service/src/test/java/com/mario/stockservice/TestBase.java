@@ -4,7 +4,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mario.events.OrderFullEvent;
 import com.mario.stockservice.config.KafkaProperties;
+import com.mario.stockservice.service.KafkaStream;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.TopologyTestDriver;
+import org.apache.kafka.streams.errors.LogAndContinueExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,6 +21,7 @@ import org.springframework.kafka.test.context.EmbeddedKafka;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 @SpringBootTest
 @EmbeddedKafka(
@@ -36,13 +43,26 @@ public class TestBase {
     @Autowired
     StreamsBuilderFactoryBean streamsFactory;
 
-    static List<ConsumerRecord<String, OrderFullEvent>> stockOrdersEventTopic = new ArrayList<>();
-    static List<ConsumerRecord<String, Error>> errorEventTopic = new ArrayList<>();
+    TopologyTestDriver testDriver;
+    public static List<ConsumerRecord<String, OrderFullEvent>> stockOrdersEventTopic = new ArrayList<>();
+    public static List<ConsumerRecord<String, Error>> errorEventTopic = new ArrayList<>();
 
     @BeforeEach
     public void clear() {
         stockOrdersEventTopic.clear();
         errorEventTopic.clear();
+
+        testDriver = new TopologyTestDriver(KafkaStream.topology(new StreamsBuilder(), kafkaProperties), dummyProperties());
+    }
+
+    private Properties dummyProperties() {
+        Properties props = new Properties();
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "test");
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummy:1234");
+        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+        props.put(StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG, LogAndContinueExceptionHandler.class);
+        return props;
     }
 
     @SuppressWarnings("unchecked")
