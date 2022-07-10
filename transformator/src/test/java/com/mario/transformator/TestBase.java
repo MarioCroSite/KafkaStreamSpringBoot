@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 
 import java.util.ArrayList;
@@ -37,6 +38,9 @@ public class TestBase {
 
     @Autowired
     ObjectMapper objectMapper;
+
+    @Autowired
+    EmbeddedKafkaBroker embeddedBroker;
 
     TopologyTestDriver testDriver;
     public static List<ConsumerRecord<String, OrderFullEvent>> orderFullEventTopic = new ArrayList<>();
