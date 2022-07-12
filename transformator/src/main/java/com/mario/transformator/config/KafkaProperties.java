@@ -18,6 +18,7 @@ public class KafkaProperties {
     private String consumerGroupId;
     private String trustedPackages;
     private BigDecimal valuableCustomerThreshold;
+    private String apiEndpoint;
 
     public String getOrderTopic() {
         return orderTopic;
@@ -91,6 +92,14 @@ public class KafkaProperties {
         this.valuableCustomerThreshold = valuableCustomerThreshold;
     }
 
+    public String getApiEndpoint() {
+        return apiEndpoint;
+    }
+
+    public void setApiEndpoint(String apiEndpoint) {
+        this.apiEndpoint = apiEndpoint;
+    }
+
     @Override
     public String toString() {
         return "KafkaProperties{" +
@@ -103,6 +112,7 @@ public class KafkaProperties {
                 ", consumerGroupId='" + consumerGroupId + '\'' +
                 ", trustedPackages='" + trustedPackages + '\'' +
                 ", valuableCustomerThreshold=" + valuableCustomerThreshold +
+                ", apiEndpoint='" + apiEndpoint + '\'' +
                 '}';
     }
 

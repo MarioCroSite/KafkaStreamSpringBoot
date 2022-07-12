@@ -15,6 +15,7 @@ com:
       application-id: "transformer"
       consumer-group-id: "transformer-group"
       trusted-packages: "*"
+      api-endpoint: http://kafka.com/api/transaction/
 
 server:
   port: 8082

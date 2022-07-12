@@ -57,23 +57,4 @@ public class KafkaStream {
         return streamsBuilder.build();
     }
 
-//    @Bean
-//    public KTable<String, OrderFullEvent> table(StreamsBuilder builder) {
-//        KeyValueBytesStoreSupplier store =
-//                Stores.persistentKeyValueStore("orders");
-//
-//        var stringSerde = Serdes.String();
-//        var orderFullEventSerde = new JsonSerde<>(OrderFullEvent.class);
-//
-//        KStream<String, OrderFullEvent> stream = builder
-//                .stream("orders-full", Consumed.with(stringSerde, orderFullEventSerde))
-//                .peek((key, value) -> System.out.println("[ORDER-SERVICE KTable] Key="+ key +", Value="+ value));
-//
-//        return stream.toTable(Materialized.<String, OrderFullEvent>as(store)
-//                .withKeySerde(stringSerde)
-//                .withValueSerde(orderFullEventSerde));
-//
-//    }
-
-
 }

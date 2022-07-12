@@ -2,45 +2,55 @@ package com.mario.transformator;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.client.WireMock;
 import com.mario.events.OrderFullEvent;
 import com.mario.events.OrderPartialEvent;
 import com.mario.transformator.config.KafkaProperties;
 import com.mario.transformator.service.KafkaStream;
+import com.mario.transformator.util.WiremockScenario;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.*;
 import org.apache.kafka.streams.errors.LogAndContinueExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cloud.contract.wiremock.AutoConfigureWireMock;
+import org.springframework.http.HttpStatus;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
+
 @SpringBootTest
 @EmbeddedKafka(
-        partitions = 1,
-        topics = {"${com.mario.kafka.order-topic}"},
-        brokerProperties = {"listeners=PLAINTEXT://localhost:9092", "port=9092"}
+        count = 3,
+        topics = {"${com.mario.kafka.order-topic}", "topic-test-1", "topic-test-2"}
 )
+@AutoConfigureWireMock(port=0)
 public class TestBase {
 
     @Autowired
-    KafkaTemplate<String, Object> kafkaTemplate;
+    @Qualifier("nonTransactional")
+    KafkaTemplate<String, String> kafkaTemplate;
 
     @Autowired
-    KafkaProperties kafkaProperties;
+    @Qualifier("transactional")
+    KafkaTemplate<String, String> kafkaTemplateTx;
+
+    @Autowired
+    public KafkaProperties kafkaProperties;
 
     @Autowired
     ObjectMapper objectMapper;
-
-    @Autowired
-    EmbeddedKafkaBroker embeddedBroker;
 
     TopologyTestDriver testDriver;
     public static List<ConsumerRecord<String, OrderFullEvent>> orderFullEventTopic = new ArrayList<>();
@@ -51,6 +61,7 @@ public class TestBase {
 
     @BeforeEach
     public void init() {
+        resetWiremock();
         orderFullEventTopic.clear();
         valuableCustomerEventTopic.clear();
         halfFullCartEventTopic.clear();
@@ -103,6 +114,31 @@ public class TestBase {
         }
     }
 
+    void stubWiremock(String url) {
+        stubFor(get(urlEqualTo(url))
+                .inScenario("Test Scenario")
+                .whenScenarioStateIs(STARTED)
+                .willReturn(aResponse().withStatus(HttpStatus.INTERNAL_SERVER_ERROR.value()))
+                .willSetStateTo(WiremockScenario.SUCCESS_SCENARIO));
+
+        stubFor(get(urlEqualTo(url))
+                .inScenario("Test Scenario")
+                .whenScenarioStateIs(WiremockScenario.SUCCESS_SCENARIO)
+                .willReturn(aResponse().withStatus(HttpStatus.OK.value()))
+                .willSetStateTo(STARTED));
+    }
+
+    void stubWiremock(String url, HttpStatus httpStatusResponse) {
+        stubFor(get(urlEqualTo(url))
+                .willReturn(aResponse().withStatus(httpStatusResponse.value())));
+    }
+
+    void resetWiremock() {
+        WireMock.reset();
+        WireMock.resetAllRequests();
+        WireMock.resetAllScenarios();
+        WireMock.resetToDefault();
+    }
 
     protected void kafkaSend(String topic, String key, Object value) {
         try {

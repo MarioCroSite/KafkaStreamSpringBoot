@@ -7,9 +7,9 @@ com:
       valuable-customer-threshold: 4000
       full-mini-cart: "full-mini-cart"
       half-full-cart: "half-full-cart"
-      bootstrap-servers:
-        - localhost:9092
+      bootstrap-servers: ${spring.embedded.kafka.brokers}
       security-protocol: "PLAINTEXT"
       application-id: "transformer"
       consumer-group-id: "transformer-group"
       trusted-packages: "*"
+      api-endpoint: http://localhost:${wiremock.server.port}/api/transaction/
