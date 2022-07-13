@@ -29,10 +29,8 @@ public class KafkaConfiguration {
         props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, config.getSecurityProtocol());
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class); //JsonSerializer.class
-        props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true); //ensure we don't push duplicates
+        props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
         props.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, "generator-1");
-        //Ako se desi ikakav network failure da se ista poruka nepošalje 2 ili više puta deduplicirno
-        //Producer je u ovom slucaju exactly once producer
         return props;
     }
 
