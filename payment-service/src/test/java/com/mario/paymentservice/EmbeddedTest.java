@@ -5,7 +5,10 @@ import com.mario.events.PaymentReservationEvent;
 import com.mario.events.Status;
 import com.mario.paymentservice.service.KafkaStream;
 import com.mario.paymentservice.util.PaymentUtils;
+import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StoreQueryParameters;
+import org.apache.kafka.streams.errors.InvalidStateStoreException;
+import org.apache.kafka.streams.state.QueryableStoreType;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.junit.jupiter.api.Test;
@@ -14,7 +17,9 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 
 import java.math.BigDecimal;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -24,9 +29,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class EmbeddedTest extends TestBase {
 
     @Test
-    void processSuccessAcceptTopology() {
+    void processSuccessAcceptTopology() throws Exception {
         String customerId = UUID.randomUUID().toString();
 
+        TimeUnit.SECONDS.sleep(10);
         var marketItemsBeforeEventIsSend = getStockStore(customerId);
         assertEquals(PaymentUtils.CUSTOMER_AMOUNT_AVAILABLE, marketItemsBeforeEventIsSend.getAmountAvailable());
         assertEquals(BigDecimal.ZERO, marketItemsBeforeEventIsSend.getAmountReserved());
@@ -35,9 +41,10 @@ class EmbeddedTest extends TestBase {
     }
 
     @Test
-    void processSuccessRejectTopology() {
+    void processSuccessRejectTopology() throws Exception {
         String customerId = UUID.randomUUID().toString();
 
+        TimeUnit.SECONDS.sleep(10);
         var customerAmountBeforeEventIsSend = getStockStore(customerId);
         assertEquals(PaymentUtils.CUSTOMER_AMOUNT_AVAILABLE, customerAmountBeforeEventIsSend.getAmountAvailable());
         assertEquals(BigDecimal.ZERO, customerAmountBeforeEventIsSend.getAmountReserved());
@@ -100,11 +107,32 @@ class EmbeddedTest extends TestBase {
     }
 
     private PaymentReservationEvent getStockStore(String key) {
-        ReadOnlyKeyValueStore<String, PaymentReservationEvent> store = streamsFactory
-                .getKafkaStreams()
-                .store(StoreQueryParameters.fromNameAndType(KafkaStream.STORE_NAME, QueryableStoreTypes.keyValueStore()));
+//        ReadOnlyKeyValueStore<String, PaymentReservationEvent> store = streamsFactory
+//                .getKafkaStreams()
+//                .store(StoreQueryParameters.fromNameAndType(KafkaStream.STORE_NAME, QueryableStoreTypes.keyValueStore()));
+
+        ReadOnlyKeyValueStore<String, PaymentReservationEvent> store = waitUntilStoreIsQueryable(
+                KafkaStream.STORE_NAME, QueryableStoreTypes.keyValueStore(), Objects.requireNonNull(streamsFactory.getKafkaStreams()));
+
 
         return store.get(key) == null ? new PaymentReservationEvent(PaymentUtils.CUSTOMER_AMOUNT_AVAILABLE) : store.get(key);
+    }
+
+    public static <T> T waitUntilStoreIsQueryable(final String storeName,
+                                                  final QueryableStoreType<T> queryableStoreType,
+                                                  final KafkaStreams streams) {
+        while (true) {
+            try {
+                return streams.store(StoreQueryParameters.fromNameAndType(storeName, queryableStoreType));
+            } catch (InvalidStateStoreException ignored) {
+                // store not yet ready for querying
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     private void verifyInputOutputEvent(OrderFullEvent input, OrderFullEvent output) {

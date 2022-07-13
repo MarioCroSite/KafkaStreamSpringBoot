@@ -4,8 +4,7 @@ com:
       payment-orders: "payment-orders"
       stock-orders: "stock-orders"
       order-full-topic: "orders-full"
-      bootstrap-servers:
-        - localhost:9092
+      bootstrap-servers: ${spring.embedded.kafka.brokers}
       security-protocol: "PLAINTEXT"
       application-id: "order"
       consumer-group-id: "transformer"

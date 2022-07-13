@@ -26,9 +26,8 @@ import java.util.Properties;
 
 @SpringBootTest
 @EmbeddedKafka(
-        partitions = 1,
-        topics = {"${com.mario.kafka.payment-orders}", "${com.mario.kafka.stock-orders}"},
-        brokerProperties = {"listeners=PLAINTEXT://localhost:9092", "port=9092"}
+        count = 3,
+        topics = {"${com.mario.kafka.payment-orders}", "${com.mario.kafka.stock-orders}"}
 )
 public class TestBase {
 

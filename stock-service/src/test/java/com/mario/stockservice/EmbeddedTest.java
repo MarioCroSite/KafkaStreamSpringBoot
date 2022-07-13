@@ -15,6 +15,7 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.kafka.support.serializer.JsonSerde;
 
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -24,9 +25,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class EmbeddedTest extends TestBase {
 
     @Test
-    void processSuccessAcceptTopology() {
+    void processSuccessAcceptTopology() throws Exception {
         String marketId = UUID.randomUUID().toString();
 
+        TimeUnit.SECONDS.sleep(10);
         var marketItemsBeforeEventIsSend = getStockStore(marketId);
         assertEquals(MarketUtils.MARKET_AVAILABLE_ITEMS, marketItemsBeforeEventIsSend.getItemsAvailable());
         assertEquals(0, marketItemsBeforeEventIsSend.getItemsReserved());
@@ -35,9 +37,10 @@ class EmbeddedTest extends TestBase {
     }
 
     @Test
-    void processSuccessRejectTopology() {
+    void processSuccessRejectTopology() throws Exception {
         String marketId = UUID.randomUUID().toString();
 
+        TimeUnit.SECONDS.sleep(10);
         var marketItemsBeforeEventIsSend = getStockStore(marketId);
         assertEquals(MarketUtils.MARKET_AVAILABLE_ITEMS, marketItemsBeforeEventIsSend.getItemsAvailable());
         assertEquals(0, marketItemsBeforeEventIsSend.getItemsReserved());
