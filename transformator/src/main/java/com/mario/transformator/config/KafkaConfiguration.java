@@ -43,14 +43,14 @@ public class KafkaConfiguration {
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, Object> listenerFactory(KafkaProperties kafkaProperties) {
-        final SeekToCurrentErrorHandler errorHandler =
-                new SeekToCurrentErrorHandler((record, exception) -> {
+        final DefaultErrorHandler errorHandler =
+                new DefaultErrorHandler((record, exception) -> {
                     // 2 seconds pause, 4 retries.
                 }, new FixedBackOff(2000L, 4L));
 
         ConcurrentKafkaListenerContainerFactory<String, Object> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(kafkaEventsConsumerFactory(kafkaProperties));
-        factory.setErrorHandler(errorHandler);
+        factory.setCommonErrorHandler(errorHandler);
         return factory;
     }
 
@@ -103,10 +103,10 @@ public class KafkaConfiguration {
         config.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, kafkaProperties.getSecurityProtocol());
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        config.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, "transaction-id");
+        config.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, "transformer-1");
         config.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
-        config.put(ProducerConfig.ACKS_CONFIG, "all");
-        config.put(ProducerConfig.RETRIES_CONFIG, 3);
+        //config.put(ProducerConfig.ACKS_CONFIG, "all");
+        //config.put(ProducerConfig.RETRIES_CONFIG, 3);
         return new DefaultKafkaProducerFactory<>(config);
     }
 

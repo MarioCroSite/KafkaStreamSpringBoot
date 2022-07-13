@@ -2,6 +2,7 @@ package com.mario.transformator;
 
 import com.mario.transformator.util.WiremockScenario;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +15,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.awaitility.Awaitility.await;
 
+//@Disabled
 public class ExactlyOnceTest extends TestBase {
     private static final Logger logger = LoggerFactory.getLogger(ExactlyOnceTest.class);
 

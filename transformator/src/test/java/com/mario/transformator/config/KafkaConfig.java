@@ -28,16 +28,16 @@ public class KafkaConfig {
     //START consumerFactory committed
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerReadCommittedContainerFactory() {
-        final SeekToCurrentErrorHandler errorHandler =
-                new SeekToCurrentErrorHandler((record, exception) -> {
+        final DefaultErrorHandler errorHandler =
+                new DefaultErrorHandler((record, exception) -> {
                     // 2 seconds pause, 4 retries.
                 }, new FixedBackOff(2000L, 4L));
 
         ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
         factory.setConsumerFactory(testConsumerFactoryReadCommitted(kafkaProperties));
-        //factory.setCommonErrorHandler(errorHandler);
-        factory.setErrorHandler(errorHandler);
+        factory.setCommonErrorHandler(errorHandler);
+        //factory.setErrorHandler(errorHandler);
         return factory;
     }
 
@@ -56,14 +56,14 @@ public class KafkaConfig {
     //START consumerFactory uncommitted
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerReadUncommittedContainerFactory() {
-        final SeekToCurrentErrorHandler errorHandler =
-                new SeekToCurrentErrorHandler((record, exception) -> {
+        final DefaultErrorHandler errorHandler =
+                new DefaultErrorHandler((record, exception) -> {
                     // 2 seconds pause, 4 retries.
                 }, new FixedBackOff(2000L, 4L));
         final ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory();
         factory.setConsumerFactory(testConsumerFactoryReadUncommitted(kafkaProperties));
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
-        factory.setErrorHandler(errorHandler);
+        factory.setCommonErrorHandler(errorHandler);
         return factory;
     }
 
