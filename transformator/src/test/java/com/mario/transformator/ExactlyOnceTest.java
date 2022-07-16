@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.*;
 
@@ -16,6 +17,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.awaitility.Awaitility.await;
 
 //@Disabled
+@Testcontainers
 public class ExactlyOnceTest extends TestBase {
     private static final Logger logger = LoggerFactory.getLogger(ExactlyOnceTest.class);
 

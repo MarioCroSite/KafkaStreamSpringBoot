@@ -21,6 +21,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.test.context.EmbeddedKafka;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.utility.DockerImageName;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,11 +57,29 @@ public class TestBase {
     ObjectMapper objectMapper;
 
     TopologyTestDriver testDriver;
+    static final PostgreSQLContainer<?> postgreSQLContainer;
     public static List<ConsumerRecord<String, OrderFullEvent>> orderFullEventTopic = new ArrayList<>();
     public static List<ConsumerRecord<String, OrderFullEvent>> valuableCustomerEventTopic = new ArrayList<>();
     public static List<ConsumerRecord<String, OrderFullEvent>> halfFullCartEventTopic = new ArrayList<>();
     public static List<ConsumerRecord<String, OrderPartialEvent>> fullMiniCartEventTopic = new ArrayList<>();
     public static List<ConsumerRecord<String, Error>> errorEventTopic = new ArrayList<>();
+
+    static {
+        postgreSQLContainer =
+                new PostgreSQLContainer<>(DockerImageName.parse("postgres:13"))
+                        .withDatabaseName("transformator")
+                        .withUsername("transformator")
+                        .withPassword("transformator")
+                        .withReuse(true);
+        postgreSQLContainer.start();
+    }
+
+    @DynamicPropertySource
+    static void datasourceConfig(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", postgreSQLContainer::getJdbcUrl);
+        registry.add("spring.datasource.password", postgreSQLContainer::getPassword);
+        registry.add("spring.datasource.username", postgreSQLContainer::getUsername);
+    }
 
     @BeforeEach
     public void init() {
