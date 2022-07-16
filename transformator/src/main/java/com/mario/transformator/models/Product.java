@@ -17,6 +17,14 @@ public class Product {
     @Column(name = "price", nullable = false)
     private BigDecimal price;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "event_id", nullable = false)
+    Event event;
+
+    public Product() {
+
+    }
+
     public Long getId() {
         return id;
     }
@@ -39,5 +47,13 @@ public class Product {
 
     public void setPrice(BigDecimal price) {
         this.price = price;
+    }
+
+    public Event getEvent() {
+        return event;
+    }
+
+    public void setEvent(Event event) {
+        this.event = event;
     }
 }

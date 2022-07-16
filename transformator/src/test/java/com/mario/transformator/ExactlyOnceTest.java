@@ -1,11 +1,13 @@
 package com.mario.transformator;
 
+import com.mario.transformator.repositories.EventRepository;
 import com.mario.transformator.util.WiremockScenario;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -15,6 +17,7 @@ import java.util.*;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 //@Disabled
 @Testcontainers
@@ -25,6 +28,9 @@ public class ExactlyOnceTest extends TestBase {
     static List<String> listReadCommitted2 = new ArrayList<>();
     static List<String> listReadUnCommitted1 = new ArrayList<>();
     static List<String> listReadUnCommitted2 = new ArrayList<>();
+
+    @Autowired
+    EventRepository eventRepository;
 
     @KafkaListener(
             groupId = "committed",
@@ -72,6 +78,7 @@ public class ExactlyOnceTest extends TestBase {
         listReadCommitted2.clear();
         listReadUnCommitted1.clear();
         listReadUnCommitted2.clear();
+        eventRepository.deleteAll();
     }
 
     @Test
@@ -86,6 +93,8 @@ public class ExactlyOnceTest extends TestBase {
         await().until(() -> listReadCommitted2.size() == 1);
         await().until(() -> listReadUnCommitted1.size() == 1);
         await().until(() -> listReadUnCommitted2.size() == 1);
+
+        assertEquals(eventRepository.findAll().size(), 2);
 
         verify(exactly(1), getRequestedFor(urlEqualTo(WiremockScenario.URL_PREFIX + event.getId())));
     }
@@ -103,6 +112,8 @@ public class ExactlyOnceTest extends TestBase {
         await().until(() -> listReadUnCommitted1.size() == 1);
         await().until(() -> listReadUnCommitted2.size() == 1);
 
+        assertEquals(eventRepository.findAll().size(), 2);
+
         verify(exactly(1), getRequestedFor(urlEqualTo(WiremockScenario.URL_PREFIX + event.getId())));
     }
 
@@ -117,6 +128,9 @@ public class ExactlyOnceTest extends TestBase {
         await().until(() -> listReadCommitted2.size() == 1);
         await().until(() -> listReadUnCommitted1.size() == 2);
         await().until(() -> listReadUnCommitted2.size() == 1);
+
+        assertEquals(eventRepository.findAll().size(), 3);
+
         verify(exactly(2), getRequestedFor(urlEqualTo(WiremockScenario.URL_PREFIX + event.getId())));
     }
 
@@ -131,6 +145,9 @@ public class ExactlyOnceTest extends TestBase {
         await().until(() -> listReadCommitted2.size() == 1);
         await().until(() -> listReadUnCommitted1.size() == 2);
         await().until(() -> listReadUnCommitted2.size() == 1);
+
+        assertEquals(eventRepository.findAll().size(), 2);
+
         verify(exactly(2), getRequestedFor(urlEqualTo(WiremockScenario.URL_PREFIX + event.getId())));
     }
 

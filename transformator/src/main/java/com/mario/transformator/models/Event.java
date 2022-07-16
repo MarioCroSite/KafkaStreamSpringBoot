@@ -4,6 +4,7 @@ import com.mario.events.OrderFullEvent;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -26,9 +27,8 @@ public class Event {
     @Column(name = "price", nullable = false)
     private BigDecimal price;
 
-    @OneToMany(fetch = FetchType.EAGER)
-    @JoinColumn(name = "product_id", nullable = false)
-    private List<Product> products;
+    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "event", orphanRemoval = true)
+    private List<Product> products = new ArrayList<>();
 
     public Event() {
 
@@ -45,6 +45,7 @@ public class Event {
             Product pro = new Product();
             pro.setPrice(product.getPrice());
             pro.setName(product.getName());
+            pro.setEvent(event);
             event.getProducts().add(pro);
         });
 

@@ -10,17 +10,19 @@ import org.apache.kafka.streams.errors.LogAndContinueExceptionHandler;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.transaction.ChainedTransactionManager;
 import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.config.KafkaStreamsConfiguration;
 import org.springframework.kafka.core.*;
 import org.springframework.kafka.listener.DefaultErrorHandler;
-import org.springframework.kafka.listener.SeekToCurrentErrorHandler;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.kafka.transaction.KafkaTransactionManager;
+import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.util.backoff.FixedBackOff;
 
+import javax.persistence.EntityManagerFactory;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -43,14 +45,14 @@ public class KafkaConfiguration {
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, Object> listenerFactory(KafkaProperties kafkaProperties) {
-        final DefaultErrorHandler errorHandler =
-                new DefaultErrorHandler((record, exception) -> {
-                    // 2 seconds pause, 4 retries.
-                }, new FixedBackOff(2000L, 4L));
+//        final DefaultErrorHandler errorHandler =
+//                new DefaultErrorHandler((record, exception) -> {
+//                    // 2 seconds pause, 4 retries.
+//                }, new FixedBackOff(2000L, 4L));
 
         ConcurrentKafkaListenerContainerFactory<String, Object> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(kafkaEventsConsumerFactory(kafkaProperties));
-        factory.setCommonErrorHandler(errorHandler);
+        //factory.setCommonErrorHandler(errorHandler);
         return factory;
     }
 
@@ -71,6 +73,17 @@ public class KafkaConfiguration {
     @Bean
     public KafkaTransactionManager kafkaTransactionManager(final ProducerFactory<String, String> producerFactoryTransactional) {
         return new KafkaTransactionManager<>(producerFactoryTransactional);
+    }
+
+    @Bean
+    public JpaTransactionManager transactionManager(EntityManagerFactory em) {
+        return new JpaTransactionManager(em);
+    }
+
+    @Bean(name = "chainedTransactionManager")
+    public ChainedTransactionManager chainedTransactionManager(JpaTransactionManager jpaTransactionManager,
+                                                               KafkaTransactionManager kafkaTransactionManager) {
+        return new ChainedTransactionManager(kafkaTransactionManager, jpaTransactionManager);
     }
 
     @Bean

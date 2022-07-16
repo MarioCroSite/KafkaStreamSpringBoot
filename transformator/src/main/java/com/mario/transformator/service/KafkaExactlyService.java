@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mario.events.OrderFullEvent;
 import com.mario.transformator.config.KafkaProperties;
 import com.mario.transformator.exception.ApiException;
+import com.mario.transformator.models.Event;
+import com.mario.transformator.repositories.EventRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -23,27 +25,38 @@ public class KafkaExactlyService {
     KafkaTemplate<String, String> transactional;
     ObjectMapper objectMapper;
     KafkaProperties kafkaProperties;
+    EventRepository eventRepository;
 
     public KafkaExactlyService(@Qualifier("nonTransactional") KafkaTemplate<String, String> nonTransactional,
                                @Qualifier("transactional") KafkaTemplate<String, String> transactional,
                                ObjectMapper objectMapper,
-                               KafkaProperties kafkaProperties) {
+                               KafkaProperties kafkaProperties,
+                               EventRepository eventRepository) {
         this.nonTransactional = nonTransactional;
         this.transactional = transactional;
         this.objectMapper = objectMapper;
         this.kafkaProperties = kafkaProperties;
+        this.eventRepository = eventRepository;
     }
 
     public void processWithoutTransaction(OrderFullEvent event) {
+        Event event1 = Event.fromOrderFullEvent(event);
+        eventRepository.save(event1);
         kafkaSend(nonTransactional, "topic-test-1", event.getId(), event);
         callApi(event.getId());
+        Event event2 = Event.fromOrderFullEvent(event);
+        eventRepository.save(event2);
         kafkaSend(nonTransactional, "topic-test-2", event.getId(), event);
     }
 
-    @Transactional
+    @Transactional("chainedTransactionManager")
     public void processWithTransaction(OrderFullEvent event) {
+        Event event1 = Event.fromOrderFullEvent(event);
+        eventRepository.save(event1);
         kafkaSend(transactional, "topic-test-1", event.getId(), event);
         callApi(event.getId());
+        Event event2 = Event.fromOrderFullEvent(event);
+        eventRepository.save(event2);
         kafkaSend(transactional, "topic-test-2", event.getId(), event);
     }
 
