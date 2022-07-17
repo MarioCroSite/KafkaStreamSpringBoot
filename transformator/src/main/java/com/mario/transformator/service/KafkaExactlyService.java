@@ -49,7 +49,7 @@ public class KafkaExactlyService {
         kafkaSend(nonTransactional, "topic-test-2", event.getId(), event);
     }
 
-    @Transactional("chainedTransactionManager")
+    @Transactional(transactionManager = "chainedTransactionManager")
     public void processWithTransaction(OrderFullEvent event) {
         Event event1 = Event.fromOrderFullEvent(event);
         eventRepository.save(event1);

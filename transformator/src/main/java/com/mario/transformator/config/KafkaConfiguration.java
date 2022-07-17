@@ -20,6 +20,7 @@ import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.kafka.transaction.KafkaTransactionManager;
 import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.transaction.jta.JtaTransactionManager;
 import org.springframework.util.backoff.FixedBackOff;
 
 import javax.persistence.EntityManagerFactory;
@@ -80,11 +81,21 @@ public class KafkaConfiguration {
         return new JpaTransactionManager(em);
     }
 
+    //https://blog.devgenius.io/transactional-integration-kafka-with-database-7eb5fc270bdc
+    //https://github.com/spring-projects/spring-kafka/issues/1699
+    //https://dzone.com/articles/most-common-spring-transactional-mistakes
+    //https://stackoverflow.com/questions/33202841/difference-between-jtatransactionmanager-and-chainedtransactionmanager
+    //https://www.slideshare.net/bibryam/dual-write-strategies-for-microservices
     @Bean(name = "chainedTransactionManager")
     public ChainedTransactionManager chainedTransactionManager(JpaTransactionManager jpaTransactionManager,
                                                                KafkaTransactionManager kafkaTransactionManager) {
         return new ChainedTransactionManager(kafkaTransactionManager, jpaTransactionManager);
     }
+
+//    public JtaTransactionManager jtaTransactionManager(JpaTransactionManager jpaTransactionManager,
+//                                                       KafkaTransactionManager kafkaTransactionManager) {
+//        return new JtaTransactionManager(jpaTransactionManager, kafkaTransactionManager);
+//    }
 
     @Bean
     @Qualifier("nonTransactional")
