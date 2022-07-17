@@ -13,6 +13,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
@@ -21,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 //@Disabled
 @Testcontainers
-public class ExactlyOnceTest extends TestBase {
+class ExactlyOnceTest extends TestBase {
     private static final Logger logger = LoggerFactory.getLogger(ExactlyOnceTest.class);
 
     static List<String> listReadCommitted1 = new ArrayList<>();
@@ -131,6 +132,14 @@ public class ExactlyOnceTest extends TestBase {
 
         assertEquals(eventRepository.findAll().size(), 3);
 
+//        Event event1 = Event.fromOrderFullEvent(event);
+//        eventRepository.save(event1);                                         //spremilo se u bazu 1. put         //spremilo se u bazu 2. put
+//        kafkaSend(nonTransactional, "topic-test-1", event.getId(), event);
+//        callApi(event.getId());                                               //desio se error 500, consumer se retryao (ponavlja se proces)
+//        Event event2 = Event.fromOrderFullEvent(event);
+//        eventRepository.save(event2);                                         //spremilo se u bazu 3. put
+//        kafkaSend(nonTransactional, "topic-test-2", event.getId(), event);
+
         verify(exactly(2), getRequestedFor(urlEqualTo(WiremockScenario.URL_PREFIX + event.getId())));
     }
 
@@ -141,12 +150,25 @@ public class ExactlyOnceTest extends TestBase {
         stubWiremock(WiremockScenario.URL_PREFIX + event.getId());
         kafkaSend(kafkaProperties.getOrderTopic(), event.getId(), event);
 
-        await().until(() -> listReadCommitted1.size() == 1);
-        await().until(() -> listReadCommitted2.size() == 1);
-        await().until(() -> listReadUnCommitted1.size() == 2);
-        await().until(() -> listReadUnCommitted2.size() == 1);
+        await().atMost(20, TimeUnit.SECONDS).until(() -> listReadCommitted1.size() == 1);
+        await().atMost(20, TimeUnit.SECONDS).until(() -> listReadCommitted2.size() == 1);
+        await().atMost(20, TimeUnit.SECONDS).until(() -> listReadUnCommitted1.size() == 2);
+        await().atMost(20, TimeUnit.SECONDS).until(() -> listReadUnCommitted2.size() == 1);
+
+//        await().until(() -> listReadCommitted1.size() == 1);
+//        await().until(() -> listReadCommitted2.size() == 1);
+//        await().until(() -> listReadUnCommitted1.size() == 2);
+//        await().until(() -> listReadUnCommitted2.size() == 1);
 
         assertEquals(eventRepository.findAll().size(), 2);
+
+//        Event event1 = Event.fromOrderFullEvent(event);                   //spremilo se u bazu 1. put     //spremilo se u bazu 1. put
+//        eventRepository.save(event1);
+//        kafkaSend(transactional, "topic-test-1", event.getId(), event);   //desio se error 500, consumer se retryao (ponavlja se proces), rollback-a se spremljeni zapis
+//        callApi(event.getId());
+//        Event event2 = Event.fromOrderFullEvent(event);
+//        eventRepository.save(event2);                                     //spremilo se u bazu 2. put
+//        kafkaSend(transactional, "topic-test-2", event.getId(), event);
 
         verify(exactly(2), getRequestedFor(urlEqualTo(WiremockScenario.URL_PREFIX + event.getId())));
     }
