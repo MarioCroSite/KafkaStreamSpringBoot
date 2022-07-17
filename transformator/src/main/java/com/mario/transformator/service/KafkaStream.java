@@ -11,6 +11,8 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
+import org.apache.kafka.streams.state.Stores;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -83,6 +85,24 @@ public class KafkaStream {
         //https://zz85.github.io/kafka-streams-viz/
 
         return streamsBuilder.build();
+    }
+
+    @Bean
+    public KTable<String, OrderEvent> table(StreamsBuilder builder, KafkaProperties kafkaProperties) {
+        KeyValueBytesStoreSupplier store =
+                Stores.inMemoryKeyValueStore("ORDERS_STORE");
+
+        var stringSerde = Serdes.String();
+        var orderEventSerde = new JsonSerde<>(OrderEvent.class);
+
+        KStream<String, OrderEvent> stream = builder
+                .stream(kafkaProperties.getOrderTopic(), Consumed.with(stringSerde, orderEventSerde))
+                .peek((key, value) -> logger.info("[ORDER KTable] Key="+ key +", Value="+ value));
+
+        return stream.toTable(Materialized.<String, OrderEvent>as(store)
+                .withKeySerde(stringSerde)
+                .withValueSerde(orderEventSerde));
+
     }
 
 }
