@@ -24,6 +24,8 @@ import org.springframework.kafka.support.serializer.JsonSerde;
 public class KafkaStream {
     private static final Logger logger = LoggerFactory.getLogger(KafkaStream.class);
 
+    public static final String STORE_NAME = "ORDERS_STORE";
+
     @Bean
     public static Topology topology(StreamsBuilder streamsBuilder, KafkaProperties kafkaProperties) {
 
@@ -88,9 +90,8 @@ public class KafkaStream {
     }
 
     @Bean
-    public KTable<String, OrderEvent> table(StreamsBuilder builder, KafkaProperties kafkaProperties) {
-        KeyValueBytesStoreSupplier store =
-                Stores.inMemoryKeyValueStore("ORDERS_STORE");
+    public KTable<String, OrderEvent> kTable(StreamsBuilder builder, KafkaProperties kafkaProperties) {
+        KeyValueBytesStoreSupplier store = Stores.inMemoryKeyValueStore(STORE_NAME);
 
         var stringSerde = Serdes.String();
         var orderEventSerde = new JsonSerde<>(OrderEvent.class);
@@ -102,7 +103,6 @@ public class KafkaStream {
         return stream.toTable(Materialized.<String, OrderEvent>as(store)
                 .withKeySerde(stringSerde)
                 .withValueSerde(orderEventSerde));
-
     }
 
 }

@@ -1,6 +1,7 @@
 package com.mario.transformator;
 
 import com.mario.events.*;
+import com.mario.transformator.controllers.response.OrderEventResponse;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.*;
 import org.junit.jupiter.api.AfterEach;
@@ -14,9 +15,12 @@ import org.springframework.kafka.support.serializer.JsonSerde;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith({OutputCaptureExtension.class})
 class TopologyTest extends TestBase {
@@ -116,6 +120,21 @@ class TopologyTest extends TestBase {
         var errorResponseTopic = errorTopic.readKeyValue();
         assertEquals(errorResponseTopic.key, orderEventError.getId());
         assertThat(errorResponseTopic.value.toString()).contains("java.lang.Error: / by zero");
+    }
+
+    @Test
+    void getAllCreatedOrders() throws Exception {
+        var events = TestData.orderEvents();
+        events.forEach(orderEvent -> orderEventTopic.pipeInput(orderEvent.getId(), orderEvent));
+
+        TimeUnit.SECONDS.sleep(5);
+
+        var result = mockMvc.perform(get("/orders"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        var response = fromJson(result.getResponse().getContentAsString(), OrderEventResponse.class);
+        assertThat(response.getOrderEvents().size()).isEqualTo(0);
     }
 
     private void verifyInputOutputEvent(OrderEvent input, OrderFullEvent output) {

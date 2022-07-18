@@ -1,6 +1,7 @@
 package com.mario.transformator;
 
 import com.mario.events.*;
+import com.mario.transformator.controllers.response.OrderEventResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.CapturedOutput;
@@ -9,10 +10,13 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith({OutputCaptureExtension.class})
 class EmbeddedTest extends TestBase {
@@ -96,6 +100,64 @@ class EmbeddedTest extends TestBase {
         assertThat(errorResponseTopic.value().toString()).contains("java.lang.Error: / by zero");
     }
 
+    @Test
+    void getAllCreatedOrders() throws Exception {
+        var events = TestData.orderEvents();
+
+        events.forEach(orderEvent ->
+                kafkaSend(kafkaProperties.getOrderTopic(), orderEvent.getId(), orderEvent));
+
+        TimeUnit.SECONDS.sleep(5);
+
+        var result = mockMvc.perform(get("/orders"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        var response = fromJson(result.getResponse().getContentAsString(), OrderEventResponse.class);
+
+
+        events.forEach(input -> {
+            var res = response.getOrderEvents().stream()
+                    .filter(e -> e.getId().equals(input.getId()))
+                    .findFirst().orElseThrow();
+            verifyInputOutputEvent(input, res);
+        });
+    }
+
+    @Test
+    void getOneCreatedOrder() throws Exception {
+        var events = TestData.orderEvents();
+
+        events.forEach(orderEvent ->
+                kafkaSend(kafkaProperties.getOrderTopic(), orderEvent.getId(), orderEvent));
+
+        TimeUnit.SECONDS.sleep(5);
+
+        var result = mockMvc.perform(get("/orders/"+events.get(0).getId()))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        var response = fromJson(result.getResponse().getContentAsString(), OrderEvent.class);
+
+        verifyInputOutputEvent(events.get(0), response);
+    }
+
+    @Test
+    void getOrderEventNotFound() throws Exception {
+        var events = TestData.orderEvents();
+
+        events.forEach(orderEvent ->
+                kafkaSend(kafkaProperties.getOrderTopic(), orderEvent.getId(), orderEvent));
+
+        TimeUnit.SECONDS.sleep(5);
+
+        var result = mockMvc.perform(get("/orders/1"))
+                .andExpect(status().isNotFound())
+                .andReturn();
+
+        assertThat(result.getResponse().getContentAsString()).contains("OrderEvent with key 1 not found");
+    }
+
     private void verifyInputOutputEvent(OrderEvent input, OrderFullEvent output) {
         assertEquals(input.getId(), output.getId());
         assertEquals(input.getMarketId(), output.getMarketId());
@@ -109,6 +171,13 @@ class EmbeddedTest extends TestBase {
         assertEquals(input.getId(), output.getId());
         assertEquals(input.getProducts().size(), output.getProductCount());
         assertEquals(calculatePrice(input.getProducts()), output.getPrice());
+    }
+
+    private void verifyInputOutputEvent(OrderEvent input, OrderEvent output) {
+        assertEquals(input.getId(), output.getId());
+        assertEquals(input.getMarketId(), output.getMarketId());
+        assertEquals(input.getCustomerId(), output.getCustomerId());
+        assertEquals(input.getProducts().size(), output.getProducts().size());
     }
 
     private BigDecimal calculatePrice(List<Product> products) {

@@ -15,6 +15,7 @@ import org.apache.kafka.streams.errors.LogAndContinueExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.contract.wiremock.AutoConfigureWireMock;
 import org.springframework.http.HttpStatus;
@@ -23,9 +24,11 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -40,6 +43,7 @@ import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
         topics = {"${com.mario.kafka.order-topic}", "topic-test-1", "topic-test-2"}
 )
 @AutoConfigureWireMock(port=0)
+@AutoConfigureMockMvc
 public class TestBase {
 
     @Autowired
@@ -55,6 +59,9 @@ public class TestBase {
 
     @Autowired
     ObjectMapper objectMapper;
+
+    @Autowired
+    MockMvc mockMvc;
 
     TopologyTestDriver testDriver;
     static final PostgreSQLContainer<?> postgreSQLContainer;
@@ -168,6 +175,10 @@ public class TestBase {
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
+    }
+
+    protected <T> T fromJson(String content, Class<T> clazz) throws IOException {
+        return objectMapper.readValue(content, clazz);
     }
 
 }

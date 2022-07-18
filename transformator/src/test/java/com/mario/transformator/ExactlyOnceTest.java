@@ -100,6 +100,7 @@ class ExactlyOnceTest extends TestBase {
         verify(exactly(1), getRequestedFor(urlEqualTo(WiremockScenario.URL_PREFIX + event.getId())));
     }
 
+    //@Disabled
     @Test
     void nonTransactionalSuccess() {
         var event = TestData.orderEvents().get(2);
