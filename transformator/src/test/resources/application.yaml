@@ -14,9 +14,6 @@ com:
       trusted-packages: "*"
       api-endpoint: http://localhost:${wiremock.server.port}/api/transaction/
 
-#log4j:
-#  logger:
-#    org:
-#      hibernate: debug
-#      springframework:
-#        transaction: debug
+spring:
+  main:
+    allow-bean-definition-overriding: true

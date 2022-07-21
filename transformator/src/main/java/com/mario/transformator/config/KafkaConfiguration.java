@@ -51,7 +51,7 @@ public class KafkaConfiguration {
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, Object> listenerFactory(KafkaProperties kafkaProperties, KafkaTransactionManager<?, ?> ktm) {
+    public ConcurrentKafkaListenerContainerFactory<String, Object> listenerFactory(KafkaProperties kafkaProperties /*, KafkaTransactionManager<?, ?> ktm*/) {
         final DefaultErrorHandler errorHandler =
                 new DefaultErrorHandler((record, exception) -> {
                     // 2 seconds pause, 4 retries.
@@ -60,7 +60,7 @@ public class KafkaConfiguration {
         ConcurrentKafkaListenerContainerFactory<String, Object> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(kafkaEventsConsumerFactory(kafkaProperties));
         factory.setCommonErrorHandler(errorHandler);
-        factory.getContainerProperties().setTransactionManager(ktm);
+        //factory.getContainerProperties().setTransactionManager(ktm);
         //https://stackoverflow.com/questions/47354521/transaction-synchronization-in-spring-kafka
         return factory;
     }
@@ -79,17 +79,17 @@ public class KafkaConfiguration {
     }
 
 
-    @Bean
-    public KafkaTransactionManager<?, ?> kafkaTransactionManager(final ProducerFactory<String, String> producerFactoryTransactional) {
-        KafkaTransactionManager<?, ?> manager = new KafkaTransactionManager<>(producerFactoryTransactional);
-        manager.setTransactionSynchronization(AbstractPlatformTransactionManager.SYNCHRONIZATION_ON_ACTUAL_TRANSACTION);
-        return manager;
-    }
-
-    @Bean
-    public JpaTransactionManager transactionManager(EntityManagerFactory em) {
-        return new JpaTransactionManager(em);
-    }
+//    @Bean
+//    public KafkaTransactionManager<?, ?> kafkaTransactionManager(final ProducerFactory<String, String> producerFactoryTransactional) {
+//        KafkaTransactionManager<?, ?> manager = new KafkaTransactionManager<>(producerFactoryTransactional);
+//        //manager.setTransactionSynchronization(AbstractPlatformTransactionManager.SYNCHRONIZATION_ON_ACTUAL_TRANSACTION);
+//        return manager;
+//    }
+//
+//    @Bean
+//    public JpaTransactionManager transactionManager(EntityManagerFactory em) {
+//        return new JpaTransactionManager(em);
+//    }
 
     //https://blog.devgenius.io/transactional-integration-kafka-with-database-7eb5fc270bdc
     //https://github.com/spring-projects/spring-kafka/issues/1699
@@ -104,15 +104,15 @@ public class KafkaConfiguration {
     //https://github.com/spring-projects/spring-kafka/issues/489 //Kafka does not support XA transactions
     //https://stackoverflow.com/questions/58128037/does-kafka-supports-xa-transactions
 
-    @Bean(name = "chainedTransactionManager")
-    public ChainedTransactionManager chainedTransactionManager(JpaTransactionManager jpaTransactionManager,
-                                                               KafkaTransactionManager<?, ?> kafkaTransactionManager) {
-        //first wil be executed jpaTransactionManager then kafkaTransactionManager
-        return new ChainedTransactionManager(kafkaTransactionManager, jpaTransactionManager);
-
-        //first wil be executed kafkaTransactionManager then jpaTransactionManager
-        //return new ChainedTransactionManager(jpaTransactionManager, kafkaTransactionManager);
-    }
+//    @Bean(name = "chainedTransactionManager")
+//    public ChainedTransactionManager chainedTransactionManager(JpaTransactionManager jpaTransactionManager,
+//                                                               KafkaTransactionManager<?, ?> kafkaTransactionManager) {
+//        //first wil be executed jpaTransactionManager then kafkaTransactionManager
+//        //return new ChainedTransactionManager(kafkaTransactionManager, jpaTransactionManager);
+//
+//        //first wil be executed kafkaTransactionManager then jpaTransactionManager
+//        return new ChainedTransactionManager(jpaTransactionManager, kafkaTransactionManager);
+//    }
 
 //    @Bean
 //    public UserTransactionManager atomikosTransactionManager() throws SystemException {

@@ -1,0 +1,66 @@
+### OrderEvent 1
+POST http://localhost:8082/kafka/1
+Content-Type: application/json
+
+{
+  "id":"4434cf3f-c468-42e8-8c42-612b7ba13606",
+  "marketId":"5fa7ab4c-b469-4417-ad22-032c5586c567",
+  "customerId":"b03fb5de-51a3-4d06-89fb-57b4f552d701",
+  "products":[
+    {
+      "id":"b8702978-537c-4851-9455-44e27e5ad48e",
+      "name":"Product 1",
+      "price":15000
+    },
+    {
+      "id":"8abfb302-3961-45f8-812f-62c1a14055eb",
+      "name":"Product 3",
+      "price":5000
+    }
+  ]
+}
+
+
+### OrderEvent 2
+POST http://localhost:8082/kafka/2
+Content-Type: application/json
+
+{
+  "id":"4434cf3f-c468-42e8-8c42-612b7ba13606",
+  "marketId":"5fa7ab4c-b469-4417-ad22-032c5586c567",
+  "customerId":"b03fb5de-51a3-4d06-89fb-57b4f552d701",
+  "products":[
+    {
+      "id":"b8702978-537c-4851-9455-44e27e5ad48e",
+      "name":"Product 1",
+      "price":15000
+    },
+    {
+      "id":"8abfb302-3961-45f8-812f-62c1a14055eb",
+      "name":"Product 3",
+      "price":5000
+    }
+  ]
+}
+
+### OrderEvent 3
+POST http://localhost:8082/kafka/3
+Content-Type: application/json
+
+{
+  "id":"4434cf3f-c468-42e8-8c42-612b7ba13606",
+  "marketId":"5fa7ab4c-b469-4417-ad22-032c5586c567",
+  "customerId":"b03fb5de-51a3-4d06-89fb-57b4f552d701",
+  "products":[
+    {
+      "id":"b8702978-537c-4851-9455-44e27e5ad48e",
+      "name":"Product 1",
+      "price":15000
+    },
+    {
+      "id":"8abfb302-3961-45f8-812f-62c1a14055eb",
+      "name":"Product 3",
+      "price":5000
+    }
+  ]
+}
