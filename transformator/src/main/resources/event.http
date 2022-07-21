@@ -1,0 +1,65 @@
+### OrderEvent transaction
+POST http://localhost:8082/orders
+Content-Type: application/json
+
+{
+   "id":"4434cf3f-c468-42e8-8c42-612b7ba13606",
+   "marketId":"5fa7ab4c-b469-4417-ad22-032c5586c567",
+   "customerId":"b03fb5de-51a3-4d06-89fb-57b4f552d701",
+   "products":[
+      {
+         "id":"b8702978-537c-4851-9455-44e27e5ad48e",
+         "name":"Product 1",
+         "price":15000
+      },
+      {
+         "id":"8abfb302-3961-45f8-812f-62c1a14055eb",
+         "name":"Product 3",
+         "price":5000
+      }
+   ]
+}
+
+
+### OrderEvent non transaction
+POST http://localhost:8082/orders
+Content-Type: application/json
+
+{
+   "id":"1907ce18-1879-4621-9962-7fde1363f20b",
+   "marketId":"ce4e9872-3aa7-4065-8f01-c4c03c5a9cff",
+   "customerId":"61ff1664-ddb5-493d-978a-173cddfb5b44",
+   "products":[
+      {
+         "id":"219d6ddd-50db-44e0-8614-276a0a5191b4",
+         "name":"Product 2",
+         "price":2000
+      },
+      {
+         "id":"2cdc7402-18bd-41d0-8ee6-afde3b29796d",
+         "name":"Product 3",
+         "price":2000
+      },
+      {
+         "id":"acdef3cd-f9f9-4833-8a97-8843b1636b28",
+         "name":"Product 4",
+         "price":2000
+      },
+      {
+         "id":"a8ab2945-619e-45aa-b981-145d10921c18",
+         "name":"Product 5",
+         "price":2000
+      },
+      {
+         "id":"c80f1f60-d579-482c-b871-df4085003fa5",
+         "name":"Product 6",
+         "price":2000
+      }
+   ]
+}
+
+### Interactive Query
+GET http://localhost:8082/orders
+
+### Interactive Query By Id
+GET http://localhost:8082/orders/4434cf3f-c468-42e8-8c42-612b7ba13606

@@ -19,3 +19,9 @@ com:
 
 server:
   port: 8082
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/kafka
+    username: kafka
+    password: kafka

@@ -12,10 +12,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.KafkaException;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.client.RestTemplate;
+
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @Service
 public class KafkaExactlyService {
@@ -26,6 +32,7 @@ public class KafkaExactlyService {
     ObjectMapper objectMapper;
     KafkaProperties kafkaProperties;
     EventRepository eventRepository;
+    static int counter = 0;
 
     public KafkaExactlyService(@Qualifier("nonTransactional") KafkaTemplate<String, String> nonTransactional,
                                @Qualifier("transactional") KafkaTemplate<String, String> transactional,
@@ -50,7 +57,7 @@ public class KafkaExactlyService {
     }
 
     @Transactional(transactionManager = "chainedTransactionManager")
-    public void processWithTransaction(OrderFullEvent event) {
+    public void processWithTransactionFirstScenario(OrderFullEvent event) {
         Event event1 = Event.fromOrderFullEvent(event);
         eventRepository.save(event1);
         kafkaSend(transactional, "topic-test-1", event.getId(), event);
@@ -58,6 +65,117 @@ public class KafkaExactlyService {
         Event event2 = Event.fromOrderFullEvent(event);
         eventRepository.save(event2);
         kafkaSend(transactional, "topic-test-2", event.getId(), event);
+    }
+
+    @Transactional(transactionManager = "chainedTransactionManager")
+    public void processWithTransactionSecondScenario(OrderFullEvent event) throws InterruptedException, ExecutionException, TimeoutException{
+        Event event1 = Event.fromOrderFullEvent(event);
+        eventRepository.save(event1);
+        counter++;
+        if(counter >= 2) {
+            kafkaSend(transactional, "topic-test-1", event.getId(), event);
+            counter = 0;
+        } else {
+            try {
+                transactional.send("topic-test-1", event.getId(), objectMapper.writeValueAsString(event)).get(1, TimeUnit.MILLISECONDS);
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+                //var repoAll = eventRepository.findAll();
+                throw new KafkaException(e.getCause().getMessage());
+            }
+        }
+        Event event2 = Event.fromOrderFullEvent(event);
+        eventRepository.save(event2);
+        kafkaSend(transactional, "topic-test-2", event.getId(), event);
+    }
+
+    @Transactional
+    public void processWithTransactionThirdScenario(OrderFullEvent event) {
+        Event event1 = Event.fromOrderFullEvent(event);
+        eventRepository.save(event1);
+        //kafkaSend(transactional, "topic-test-1", event.getId(), event);
+        counter++;
+        if(counter >= 2) {
+            kafkaSend(transactional, "topic-test-1", event.getId(), event);
+            counter = 0;
+        } else {
+            try {
+                 transactional.send("topic-test-1", event.getId(), objectMapper.writeValueAsString(event)).get(1, TimeUnit.MILLISECONDS);
+            } catch (Exception e) {
+                e.printStackTrace();
+                //var repoAll = eventRepository.findAll();
+                throw new KafkaException(e.getCause().getMessage());
+            }
+        }
+
+        //callApi(event.getId());
+        Event event2 = Event.fromOrderFullEvent(event);
+        eventRepository.save(event2);
+        kafkaSend(transactional, "topic-test-2", event.getId(), event);
+    }
+
+    public void processWithTransactionFourthScenario(OrderFullEvent event) {
+        String eventAsString = null;
+        try {
+            eventAsString = objectMapper.writeValueAsString(event);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+
+        String finalEventAsString = eventAsString;
+
+        var isTransactionActive = TransactionSynchronizationManager.isActualTransactionActive();
+        logger.info("processWithTransactionFourthScenario {}", isTransactionActive);
+
+        transactional.executeInTransaction(t -> {
+            var isTransactionActiveInside = t.inTransaction();
+            logger.info("processWithTransactionFourthScenario-INSIDE {}", isTransactionActiveInside);
+
+            Event event1 = Event.fromOrderFullEvent(event);
+            eventRepository.save(event1);
+            //data is not roll-back from DB
+
+            try {
+                t.send("topic-test-1", event.getId(), finalEventAsString); //.get(1, TimeUnit.MILLISECONDS);
+            } catch (Exception e) {
+                var repoAll = eventRepository.findAll();
+                e.printStackTrace();
+                throw new RuntimeException(e.getCause());
+            }
+
+            counter++;
+            if(counter >= 2) {
+                Event event2 = Event.fromOrderFullEvent(event);
+                eventRepository.save(event2);
+                counter = 0;
+            } else {
+                Event event2 = Event.fromOrderFullEventWithEx(event);
+                eventRepository.save(event2);
+            }
+            t.send("topic-test-2", event.getId(), finalEventAsString);
+            return true;
+        });
+    }
+
+    @Transactional(transactionManager = "chainedTransactionManager")
+    public void processWithTransactionFifthScenario(OrderFullEvent event) {
+        kafkaSend(transactional, "topic-test-1", event.getId(), event);
+        counter++;
+        if(counter >= 3) {
+            Event event2 = Event.fromOrderFullEvent(event);
+            eventRepository.save(event2);
+            //eventRepository.saveAndFlush(event2);
+            counter = 0;
+        } else {
+            Event event2 = Event.fromOrderFullEventWithEx(event);
+            eventRepository.save(event2);
+            //eventRepository.saveAndFlush(event2);
+        }
+        //kafkaSend(transactional, "topic-test-1", event.getId(), event);
+        kafkaSend(transactional, "topic-test-2", event.getId(), event);
+        Event event2 = Event.fromOrderFullEvent(event);
+        eventRepository.save(event2);
+        //eventRepository.saveAndFlush(event2);
     }
 
     private void kafkaSend(KafkaTemplate<String, String> template, String topic, String key, Object value) {

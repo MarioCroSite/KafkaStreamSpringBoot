@@ -52,6 +52,24 @@ public class Event {
         return event;
     }
 
+    public static Event fromOrderFullEventWithEx(OrderFullEvent orderFullEvent) {
+        Event event = new Event();
+        event.setMarketId(null);
+        event.setCustomerId(orderFullEvent.getCustomerId());
+        event.setProductCount(orderFullEvent.getProductCount());
+        event.setPrice(orderFullEvent.getPrice());
+
+        orderFullEvent.getProducts().forEach(product -> {
+            Product pro = new Product();
+            pro.setPrice(product.getPrice());
+            pro.setName(product.getName());
+            pro.setEvent(event);
+            event.getProducts().add(pro);
+        });
+
+        return event;
+    }
+
 
     public Long getId() {
         return id;

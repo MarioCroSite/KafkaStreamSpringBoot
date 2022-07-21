@@ -7,6 +7,7 @@ import org.apache.kafka.common.IsolationLevel;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.errors.LogAndContinueExceptionHandler;
+import org.apache.kafka.streams.state.HostInfo;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,18 +19,23 @@ import org.springframework.kafka.core.*;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.springframework.kafka.transaction.ChainedKafkaTransactionManager;
 import org.springframework.kafka.transaction.KafkaTransactionManager;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.transaction.jta.JtaTransactionManager;
+import org.springframework.transaction.support.AbstractPlatformTransactionManager;
 import org.springframework.util.backoff.FixedBackOff;
 
 import javax.persistence.EntityManagerFactory;
+import javax.transaction.SystemException;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
 @Configuration
 public class KafkaConfiguration {
+
+    public static HostInfo hostInfo = new HostInfo("localhost", 8082);
 
     @Bean(name = KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME)
     public KafkaStreamsConfiguration kafkaStreamsConfiguration(KafkaProperties kafkaProperties) {
@@ -38,14 +44,14 @@ public class KafkaConfiguration {
         properties.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaProperties.getBootstrapServers());
         properties.put(StreamsConfig.SECURITY_PROTOCOL_CONFIG, kafkaProperties.getSecurityProtocol());
         properties.put(StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG, LogAndContinueExceptionHandler.class);
-        properties.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE_V2); //EXACTLY_ONCE_V2, EXACTLY_ONCE
-        //doda se transactional.id = transformer-0_2
+        properties.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE_V2);
+        properties.put(StreamsConfig.APPLICATION_SERVER_CONFIG, hostInfo.host() + ":" + hostInfo.port());
 
         return new KafkaStreamsConfiguration(properties);
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, Object> listenerFactory(KafkaProperties kafkaProperties) {
+    public ConcurrentKafkaListenerContainerFactory<String, Object> listenerFactory(KafkaProperties kafkaProperties, KafkaTransactionManager<?, ?> ktm) {
         final DefaultErrorHandler errorHandler =
                 new DefaultErrorHandler((record, exception) -> {
                     // 2 seconds pause, 4 retries.
@@ -54,6 +60,8 @@ public class KafkaConfiguration {
         ConcurrentKafkaListenerContainerFactory<String, Object> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(kafkaEventsConsumerFactory(kafkaProperties));
         factory.setCommonErrorHandler(errorHandler);
+        factory.getContainerProperties().setTransactionManager(ktm);
+        //https://stackoverflow.com/questions/47354521/transaction-synchronization-in-spring-kafka
         return factory;
     }
 
@@ -72,8 +80,10 @@ public class KafkaConfiguration {
 
 
     @Bean
-    public KafkaTransactionManager kafkaTransactionManager(final ProducerFactory<String, String> producerFactoryTransactional) {
-        return new KafkaTransactionManager<>(producerFactoryTransactional);
+    public KafkaTransactionManager<?, ?> kafkaTransactionManager(final ProducerFactory<String, String> producerFactoryTransactional) {
+        KafkaTransactionManager<?, ?> manager = new KafkaTransactionManager<>(producerFactoryTransactional);
+        manager.setTransactionSynchronization(AbstractPlatformTransactionManager.SYNCHRONIZATION_ON_ACTUAL_TRANSACTION);
+        return manager;
     }
 
     @Bean
@@ -86,15 +96,37 @@ public class KafkaConfiguration {
     //https://dzone.com/articles/most-common-spring-transactional-mistakes
     //https://stackoverflow.com/questions/33202841/difference-between-jtatransactionmanager-and-chainedtransactionmanager
     //https://www.slideshare.net/bibryam/dual-write-strategies-for-microservices
+    //https://stackoverflow.com/questions/52207598/synchronising-transactions-between-database-and-kafka-producer
+    //https://stackoverflow.com/questions/47354521/transaction-synchronization-in-spring-kafka
+    //https://grapeup.com/blog/kafka-transactions-integrating-with-legacy-systems/#
+    //https://stackoverflow.com/questions/47354521/transaction-synchronization-in-spring-kafka
+    //https://github.com/spring-projects/spring-kafka/issues/433
+    //https://github.com/spring-projects/spring-kafka/issues/489 //Kafka does not support XA transactions
+    //https://stackoverflow.com/questions/58128037/does-kafka-supports-xa-transactions
+
     @Bean(name = "chainedTransactionManager")
     public ChainedTransactionManager chainedTransactionManager(JpaTransactionManager jpaTransactionManager,
-                                                               KafkaTransactionManager kafkaTransactionManager) {
+                                                               KafkaTransactionManager<?, ?> kafkaTransactionManager) {
+        //first wil be executed jpaTransactionManager then kafkaTransactionManager
         return new ChainedTransactionManager(kafkaTransactionManager, jpaTransactionManager);
+
+        //first wil be executed kafkaTransactionManager then jpaTransactionManager
+        //return new ChainedTransactionManager(jpaTransactionManager, kafkaTransactionManager);
     }
 
-//    public JtaTransactionManager jtaTransactionManager(JpaTransactionManager jpaTransactionManager,
-//                                                       KafkaTransactionManager kafkaTransactionManager) {
-//        return new JtaTransactionManager(jpaTransactionManager, kafkaTransactionManager);
+//    @Bean
+//    public UserTransactionManager atomikosTransactionManager() throws SystemException {
+//        UserTransactionManager userTransactionManager = new UserTransactionManager();
+//        userTransactionManager.setTransactionTimeout(600000);
+//        return userTransactionManager;
+//    }
+//
+//    @Bean
+//    public JtaTransactionManager jtaTransactionManager(UserTransactionManager atomikosTransactionManager) {
+//        JtaTransactionManager transactionManager = new JtaTransactionManager();
+//        transactionManager.setTransactionManager(atomikosTransactionManager);
+//        transactionManager.setUserTransaction(atomikosTransactionManager);
+//        return transactionManager;
 //    }
 
     @Bean

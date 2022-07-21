@@ -13,3 +13,10 @@ com:
       consumer-group-id: "transformer-group"
       trusted-packages: "*"
       api-endpoint: http://localhost:${wiremock.server.port}/api/transaction/
+
+#log4j:
+#  logger:
+#    org:
+#      hibernate: debug
+#      springframework:
+#        transaction: debug

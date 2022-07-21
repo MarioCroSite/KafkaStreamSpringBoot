@@ -83,6 +83,16 @@ services:
       - kafka1
       - kafka2
       - kafka3
+  postgres:
+    image: postgres:13
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=kafka
+      - POSTGRES_PASSWORD=kafka
+      - POSTGRES_DB=kafka
+    command: -c fsync=off
+
 #  kafkadrop:
 #    image: obsidiandynamics/kafdrop:3.28.0
 #    depends_on:
