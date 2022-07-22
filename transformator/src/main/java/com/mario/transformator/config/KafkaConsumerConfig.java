@@ -34,8 +34,8 @@ public class KafkaConsumerConfig {
                 }, new FixedBackOff(2000L, 4L));
 
         ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
-        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
         factory.setConsumerFactory(testConsumerFactoryReadCommitted(kafkaProperties));
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
         //factory.setCommonErrorHandler(errorHandler);
         //factory.getContainerProperties().setTransactionManager(ktm);
         return factory;
@@ -75,7 +75,8 @@ public class KafkaConsumerConfig {
         config.put(ConsumerConfig.GROUP_ID_CONFIG, kafkaProperties.getConsumerGroupId());
         config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        //config.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, IsolationLevel.READ_UNCOMMITTED.toString().toLowerCase(Locale.ROOT));
+        config.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, IsolationLevel.READ_UNCOMMITTED.toString().toLowerCase(Locale.ROOT));
+        //https://stackoverflow.com/questions/61884941/kafka-listener-poll-interval-how-to-schedule-kafka-consumer-poll-with-15-m
         return new DefaultKafkaConsumerFactory<>(config);
     }
     //END consumerFactory uncommitted

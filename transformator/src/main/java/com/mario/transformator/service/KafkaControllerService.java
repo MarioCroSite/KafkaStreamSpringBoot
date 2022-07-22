@@ -16,6 +16,8 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.concurrent.TimeUnit;
+
 @Service
 public class KafkaControllerService {
     private static final Logger logger = LoggerFactory.getLogger(KafkaControllerService.class);
@@ -35,23 +37,25 @@ public class KafkaControllerService {
         this.kafkaTemplateTx = kafkaTemplateTx;
     }
 
-    @Transactional //(transactionManager = "chainedTransactionManager")
+    @Transactional(transactionManager = "chainedTransactionManager")
     public void sendToKafkaAndDBScenario1(OrderEvent event) {
         eventRepository.save(toEvent(event));
         eventRepository.save(toEventWithEx(event));
         kafkaSendTx("tester-1", event.getId(), event);
     }
 
-    @Transactional //(transactionManager = "chainedTransactionManager")
+    @Transactional(transactionManager = "chainedTransactionManager")
     public void sendToKafkaAndDBScenario2(OrderEvent event) {
         eventRepository.save(toEvent(event));
         kafkaSendTx("tester-1", event.getId(), event);
+        secondsSleep(5);
         eventRepository.save(toEventWithEx(event));
     }
 
-    @Transactional //(transactionManager = "chainedTransactionManager")
+    @Transactional(transactionManager = "chainedTransactionManager")
     public void sendToKafkaAndDBScenario3(OrderEvent event) {
         kafkaSendTx("tester-1", event.getId(), event);
+        secondsSleep(5);
         eventRepository.save(toEvent(event));
         eventRepository.save(toEventWithEx(event));
     }
@@ -84,6 +88,14 @@ public class KafkaControllerService {
         try {
             kafkaTemplateTx.send(topic, key, objectMapper.writeValueAsString(value));
         } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void secondsSleep(long second) {
+        try {
+            TimeUnit.SECONDS.sleep(second);
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
