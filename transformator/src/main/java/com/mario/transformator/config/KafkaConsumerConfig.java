@@ -76,6 +76,7 @@ public class KafkaConsumerConfig {
         config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         config.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, IsolationLevel.READ_UNCOMMITTED.toString().toLowerCase(Locale.ROOT));
+        //config.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, 10000);
         //https://stackoverflow.com/questions/61884941/kafka-listener-poll-interval-how-to-schedule-kafka-consumer-poll-with-15-m
         return new DefaultKafkaConsumerFactory<>(config);
     }
