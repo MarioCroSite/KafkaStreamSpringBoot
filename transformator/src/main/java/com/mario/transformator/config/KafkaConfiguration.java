@@ -83,10 +83,10 @@ public class KafkaConfiguration {
     public KafkaTransactionManager<?, ?> kafkaTransactionManager(final ProducerFactory<String, String> producerFactoryTransactional) {
         KafkaTransactionManager<?, ?> manager = new KafkaTransactionManager<>(producerFactoryTransactional);
 
-        manager.setFailEarlyOnGlobalRollbackOnly(true);
-        manager.setNestedTransactionAllowed(true);
-        manager.setValidateExistingTransaction(true);
-        manager.setRollbackOnCommitFailure(true);
+        //manager.setFailEarlyOnGlobalRollbackOnly(true);
+        //manager.setNestedTransactionAllowed(true);
+        //manager.setValidateExistingTransaction(true);
+        //manager.setRollbackOnCommitFailure(true);
 
         manager.setTransactionSynchronization(AbstractPlatformTransactionManager.SYNCHRONIZATION_ALWAYS);
         return manager;
@@ -96,10 +96,10 @@ public class KafkaConfiguration {
     public JpaTransactionManager transactionManager(EntityManagerFactory em) {
         JpaTransactionManager manager = new JpaTransactionManager(em);
 
-        manager.setFailEarlyOnGlobalRollbackOnly(true);
-        manager.setNestedTransactionAllowed(true);
-        manager.setValidateExistingTransaction(true);
-        manager.setRollbackOnCommitFailure(true);
+        //manager.setFailEarlyOnGlobalRollbackOnly(true);
+        //manager.setNestedTransactionAllowed(true);
+        //manager.setValidateExistingTransaction(true);
+        //manager.setRollbackOnCommitFailure(true);
 
         return manager;
     }
@@ -117,15 +117,15 @@ public class KafkaConfiguration {
     //https://github.com/spring-projects/spring-kafka/issues/489 //Kafka does not support XA transactions
     //https://stackoverflow.com/questions/58128037/does-kafka-supports-xa-transactions
 
-//    @Bean(name = "chainedTransactionManager")
-//    public ChainedTransactionManager chainedTransactionManager(JpaTransactionManager jpaTransactionManager,
-//                                                               KafkaTransactionManager<?, ?> kafkaTransactionManager) {
-//        //first wil be executed jpaTransactionManager then kafkaTransactionManager
-//        return new ChainedTransactionManager(kafkaTransactionManager, jpaTransactionManager);
-//
-//        //first wil be executed kafkaTransactionManager then jpaTransactionManager
-//        //return new ChainedTransactionManager(jpaTransactionManager, kafkaTransactionManager);
-//    }
+    @Bean(name = "chainedTransactionManager")
+    public ChainedTransactionManager chainedTransactionManager(JpaTransactionManager jpaTransactionManager,
+                                                               KafkaTransactionManager<?, ?> kafkaTransactionManager) {
+        //first wil be executed jpaTransactionManager then kafkaTransactionManager
+        return new ChainedTransactionManager(kafkaTransactionManager, jpaTransactionManager);
+
+        //first wil be executed kafkaTransactionManager then jpaTransactionManager
+        //return new ChainedTransactionManager(jpaTransactionManager, kafkaTransactionManager);
+    }
 
 //    @Bean
 //    public UserTransactionManager atomikosTransactionManager() throws SystemException {

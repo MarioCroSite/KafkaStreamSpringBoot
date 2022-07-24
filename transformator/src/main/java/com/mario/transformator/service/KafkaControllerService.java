@@ -57,18 +57,20 @@ public class KafkaControllerService {
         eventRepository.save(toEventWithEx(event));
     }
 
-    @Transactional(transactionManager = "kafkaTransactionManager", propagation = Propagation.REQUIRED) //(transactionManager = "chainedTransactionManager")
+    @Transactional(transactionManager = "chainedTransactionManager")
     public void sendToKafkaAndDBScenario3(OrderEvent event) {
-        transactionalHelper.executeInTransaction(() -> {
-            //eventRepository.save(toEvent(event));
+        kafkaSendTx("tester-1", event.getId(), event);
+        //secondsSleep(5);
+        eventRepository.save(toEvent(event));
+        //eventRepository.save(toEventWithEx(event));
+    }
+
+    @Transactional(transactionManager = "transactionManager", propagation = Propagation.REQUIRED)
+    public void sendToKafkaAndDBScenario31(OrderEvent event) {
+        transactionalHelper.executeInKafkaTransaction(() -> {
             kafkaSendTx("tester-1", event.getId(), event);
             eventRepository.save(toEvent(event));
         });
-
-        //kafkaSendTx("tester-1", event.getId(), event);
-        //secondsSleep(5);
-        //eventRepository.save(toEvent(event));
-        //eventRepository.save(toEventWithEx(event));
     }
 
     @Bean
