@@ -26,6 +26,8 @@ Imaginary preliminary steps:
 ## Technologies used
 - **Java 21**
 - **Spring Boot 3.3.3**
+- **PostgreSQL**
+- **Spring Data JPA**
 - **WireMock**
 - **Awaitility**
 - **Testcontainers**
